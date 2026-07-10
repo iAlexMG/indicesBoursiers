@@ -1,0 +1,36 @@
+# Phase 0 — mesures NQ via Rithmic (in-Quantower)  2026-07-08 22:47:42 UTC
+
+## Contrat
+Name=NQ | Id=NQ@CME | Exchange=CME | Type=Futures
+TickSize=0.25 | GetTickCost(1)=5 | NotionalValueStep=1
+LotSize=1 | MinLot=1 | MaxLot=2147483647 | LotStep=1
+ExpirationDate=2026-09-18T17:08:58.2000000Z | LastTradingDate=0001-01-01T00:00:00.0000000 | Root=NQ
+
+## HistoryMetadata (annoncé par Rithmic)
+tickHistoryTypes=[Last]
+timeHistoryTypes=[Last]
+basePeriods=[Second,Minute]
+stepTick=01:00:00 | stepMin=6.22:40:00 | stepDay=10000.00:00:00
+ServerSideTickDirectionAvailable=False
+
+## Q2 profondeur tick (Last) + Q4 volume/jour — sonde jour par jour
+J- 0 [2026-07-07] :   514218 ticks | buy=254728 sell=259489 none=1 | aggressor renseigné=100,0%
+J- 1 [2026-07-06] :   412107 ticks | buy=205948 sell=206158 none=1 | aggressor renseigné=100,0%
+J- 2 [2026-07-05] :    14091 ticks | buy=7070 sell=7020 none=1 | aggressor renseigné=100,0%
+J- 3 [2026-07-04] : 0 tick
+J- 4 [2026-07-03] :    75653 ticks | buy=38792 sell=36861 none=0 | aggressor renseigné=100,0%
+J- 5 [2026-07-02] :   582662 ticks | buy=290467 sell=292194 none=1 | aggressor renseigné=100,0%
+J- 6 [2026-07-01] :   470361 ticks | buy=236490 sell=233870 none=1 | aggressor renseigné=100,0%
+J- 7 [2026-06-30] :   434182 ticks | buy=216526 sell=217655 none=1 | aggressor renseigné=100,0%
+J- 8 [2026-06-29] :   462702 ticks | buy=229718 sell=232983 none=1 | aggressor renseigné=100,0%
+J- 9 [2026-06-28] :    19326 ticks | buy=9705 sell=9620 none=1 | aggressor renseigné=100,0%
+J-10 [2026-06-27] : 0 tick
+J-11 [2026-06-26] :   502919 ticks | buy=251109 sell=251810 none=0 | aggressor renseigné=100,0%
+J-12 [2026-06-25] :   593919 ticks | buy=296086 sell=297832 none=1 | aggressor renseigné=100,0%
+J-13 [2026-06-24] :   616016 ticks | buy=309400 sell=306615 none=1 | aggressor renseigné=100,0%
+J-14 [2026-06-23] :   660894 ticks | buy=331262 sell=329631 none=1 | aggressor renseigné=100,0%
+
+## Synthèse
+Q2 profondeur : plus ancien tick vu = 2026-06-23T00:00:00.0108720Z (13 jours avec données)
+Q3 aggressor : total=5359050 | buy=2677301 sell=2681738 none=11 → renseigné 100,0%
+Q4 volumétrie : ~412234 ticks/jour (moyenne sur 13 jours) → SQLite ~16,5 Mo/jour (40 o/tick estimé)

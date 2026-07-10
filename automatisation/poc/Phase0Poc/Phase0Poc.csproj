@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RollForward>LatestMinor</RollForward>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!-- Le chemin Quantower est versionné (v*) : jamais en dur. build.ps1 résout le plus
+       récent et le passe via -p:QuantowerBin=... -->
+  <Target Name="CheckQuantowerBin" BeforeTargets="BeforeBuild">
+    <Error Condition="'$(QuantowerBin)' == '' Or !Exists('$(QuantowerBin)\TradingPlatform.BusinessLayer.dll')"
+           Text="QuantowerBin absent ou invalide. Compiler via build.ps1 (résout C:\Quantower\TradingPlatform\v* le plus récent)." />
+  </Target>
+
+  <ItemGroup>
+    <Reference Include="TradingPlatform.BusinessLayer">
+      <HintPath>$(QuantowerBin)\TradingPlatform.BusinessLayer.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

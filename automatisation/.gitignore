@@ -1,0 +1,28 @@
+# Build
+bin/
+obj/
+*.user
+.vs/
+
+# Credentials & config locale — JAMAIS versionner
+*.local.json
+credentials*
+!credentials*.example.json
+
+# Bases de ticks & données
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+
+# Binaires (les DLL Quantower ne se redistribuent pas)
+*.dll
+*.exe
+*.pdb
+
+# Logs & dumps volumineux
+*.log
+api-dump*.txt
+
+# Chandeliers de contrôle générés (regénérables via candles.py, varient à chaque collecte)
+docs/*-control.html

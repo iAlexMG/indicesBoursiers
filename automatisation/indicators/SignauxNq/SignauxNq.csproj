@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>SignauxNq</AssemblyName>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+
+  <Target Name="CheckQuantowerBin" BeforeTargets="BeforeBuild">
+    <Error Condition="'$(QuantowerBin)' == '' Or !Exists('$(QuantowerBin)\TradingPlatform.BusinessLayer.dll')"
+           Text="QuantowerBin absent ou invalide. Compiler via deploy.ps1." />
+  </Target>
+
+  <ItemGroup>
+    <Reference Include="TradingPlatform.BusinessLayer">
+      <HintPath>$(QuantowerBin)\TradingPlatform.BusinessLayer.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

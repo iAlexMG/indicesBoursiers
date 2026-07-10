@@ -1,0 +1,20 @@
+# Caches Python / IDE / outils
+__pycache__/
+*.pyc
+.pytest_cache/
+.idea/
+.claude/
+
+# Captures à la racine : doublons exacts de site-content/assets/img/
+# (non référencées par le README — la version canonique est dans site-content)
+/Capture_01.PNG
+/Capture_02.PNG
+/Capture_03.PNG
+/Footprint.PNG
+/Heatmap.PNG
+/Orderbook.PNG
+/Trades.PNG
+
+# Système
+Thumbs.db
+.DS_Store
