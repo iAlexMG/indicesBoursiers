@@ -1,0 +1,82 @@
+{
+  "sections": [
+    {
+      "id": "historique",
+      "titre": {
+        "fr": "Historique — extraction des ticks",
+        "en": "History — tick extraction"
+      },
+      "accroche": {
+        "fr": "Les ticks NQ extraits depuis Quantower, au schéma exact du pilier crypto.",
+        "en": "NQ ticks extracted from inside Quantower, in the exact schema of the crypto pillar."
+      },
+      "intro": {
+        "fr": "Le point de départ de la chaîne : extraire les transactions tick-par-tick des futures NQ pour alimenter la même chaîne Python que le projet crypto.",
+        "en": "The starting point of the chain: extracting tick-by-tick trades of the NQ futures to feed the same Python chain as the crypto project."
+      },
+      "texte": {
+        "fr": "## Le problème\n\nRithmic ne fournit pas d'API publique hors Quantower : impossible d'extraire les ticks NQ par un simple script. L'accès passe donc par une stratégie C# qui tourne dans Quantower et lit la connexion déjà authentifiée.\n\n## Ce qui est livré\n\nUne stratégie Quantower (NQ Tick Extractor) qui télécharge les ticks (prix, taille, côté agresseur) et les écrit en SQLite au schéma exact du projet crypto — toute la chaîne Python en aval (chandelles, volume profile) tourne sans modification.\n\nCollecte incrémentale et idempotente : les jours complets sont marqués et jamais re-téléchargés, le jour courant est purgé puis ré-inséré, et un mode démon recollecte automatiquement toutes les N heures tant que Quantower est ouvert.\n\n## Mesuré\n\nEnviron 412 000 ticks par jour sur NQ, à peu près deux semaines de profondeur d'historique disponible, et le côté agresseur présent sur la quasi-totalité des ticks.",
+        "en": "## The problem\n\nRithmic offers no public API outside Quantower: extracting NQ ticks with a plain script is impossible. Access therefore goes through a C# strategy that runs inside Quantower and reads the already-authenticated connection.\n\n## What is delivered\n\nA Quantower strategy (NQ Tick Extractor) that downloads the ticks (price, size, aggressor side) and writes them to SQLite in the exact schema of the crypto project — the whole downstream Python chain (candles, volume profile) runs unmodified.\n\nIncremental and idempotent collection: complete days are marked and never re-downloaded, the current day is purged then re-inserted, and a daemon mode automatically re-collects every N hours while Quantower is open.\n\n## Measured\n\nAbout 412,000 ticks per day on NQ, roughly two weeks of available history depth, and the aggressor side present on nearly every tick."
+      }
+    },
+    {
+      "id": "affichage",
+      "titre": {
+        "fr": "Affichage — dashboard temps réel",
+        "en": "Display — real-time dashboard"
+      },
+      "accroche": {
+        "fr": "Footprint, heatmap, trades et carnet superposés sur un même graphe (ES / NQ).",
+        "en": "Footprint, heatmap, trades and order book superposed on a single chart (ES / NQ)."
+      },
+      "intro": {
+        "fr": "Un tableau de bord d'orderflow temps réel pour les futures ES et NQ d'Interactive Brokers : footprint, heatmap de liquidité, trades et carnet d'ordres superposés sur un même graphe, façon Bookmap et Quantower. Construit en Python (PyQt5, pyqtgraph, ib_insync), avec une source de données unique derrière laquelle on permute le flux réel d'IBKR et un mode démo synthétique. Parcourez les couches une à une, puis la contrainte de données propre à IBKR.",
+        "en": "A real-time order-flow dashboard for the ES and NQ futures on Interactive Brokers: footprint, liquidity heatmap, trades and order book superposed on a single chart, Bookmap- and Quantower-style. Built in Python (PyQt5, pyqtgraph, ib_insync), with a single data source behind which the real IBKR feed and a synthetic demo mode are interchangeable. Walk through the layers one by one, then the data constraint specific to IBKR."
+      },
+      "statut": {
+        "fr": "4 couches",
+        "en": "4 layers"
+      },
+      "sousHub": true,
+      "inclure": "affichage"
+    },
+    {
+      "id": "backtesting",
+      "titre": {
+        "fr": "Backtesting — LEAN sur NQ",
+        "en": "Backtesting — LEAN on NQ"
+      },
+      "accroche": {
+        "fr": "Les huit stratégies BTC rejouées telles quelles sur les futures NQ.",
+        "en": "The eight BTC strategies replayed as-is on the NQ futures."
+      },
+      "statut": {
+        "fr": "À consolider",
+        "en": "Being consolidated"
+      },
+      "texte": {
+        "fr": "## Le portage\n\nLes huit stratégies backtestées sur BTCUSDT (pilier backtesting du projet crypto) ont été rejouées telles quelles sur les futures NQ avec le moteur LEAN : mêmes règles, mêmes garde-fous de causalité, données de ticks extraites de Quantower.\n\n## Résultats\n\nHuit backtests sur huit menés à terme ; la stratégie volume profile ressort en tête (+2,9 %, drawdown 0,9 % sur la période testée). Les écarts avec BTC sont commentés dans le dépôt.\n\n## À consolider\n\nLe socle LEAN partagé (chargement des données, sessions, modèle de frais NQ) vit encore côté crypto : il reste à le rapatrier pour rendre ce pilier autonome.",
+        "en": "## The port\n\nThe eight strategies backtested on BTCUSDT (the crypto project's backtesting pillar) were replayed as-is on the NQ futures with the LEAN engine: same rules, same causality safeguards, tick data extracted from Quantower.\n\n## Results\n\nEight backtests out of eight completed; the volume-profile strategy comes out on top (+2.9%, 0.9% drawdown over the tested period). The gaps versus BTC are discussed in the repository.\n\n## To consolidate\n\nThe shared LEAN scaffolding (data loading, sessions, NQ fee model) still lives on the crypto side: it remains to be brought over to make this pillar self-contained."
+      }
+    },
+    {
+      "id": "automatisation",
+      "titre": {
+        "fr": "Automatisation — Quantower",
+        "en": "Automation — Quantower"
+      },
+      "accroche": {
+        "fr": "Des indicateurs C# validés par parité, vers le trading semi-automatisé — en simulation d'abord.",
+        "en": "C# indicators validated by parity, toward semi-automated trading — in simulation first."
+      },
+      "statut": {
+        "fr": "En simulation",
+        "en": "In simulation"
+      },
+      "texte": {
+        "fr": "## La démarche par phases\n\nPorter vers NQ, dans Quantower, la chaîne construite et backtestée sur BTC — en avançant par phases mesurées, chacune avec un critère de sortie vérifiable avant de passer à la suivante.\n\n## Fait\n\nPhase 0 — faisabilité mesurée : profondeur d'historique, fiabilité du côté agresseur, volumétrie.\n\nPhase 1 — l'extracteur de ticks (voir le pilier Historique).\n\nPhase 2 — les huit stratégies backtestées sur NQ (voir le pilier Backtesting).\n\nPhase 3 — indicateurs C# natifs Quantower (volume profile de session, EMA de delta, signaux par stratégie), chacun validé par un rapport de parité contre le pipeline Python de référence.\n\n## À venir\n\nPhase 4 — shadow mode : les signaux sont journalisés en direct, zéro ordre envoyé, puis comparés aux backtests.\n\nPhase 5 — ordres semi-automatisés supervisés, d'abord en simulation, avec garde-fous : taille limitée, arrêt d'urgence, journal d'exécution.",
+        "en": "## The phased approach\n\nPorting to NQ, inside Quantower, the chain built and backtested on BTC — moving through measured phases, each with a verifiable exit criterion before starting the next.\n\n## Done\n\nPhase 0 — measured feasibility: history depth, aggressor-side reliability, tick volume.\n\nPhase 1 — the tick extractor (see the History pillar).\n\nPhase 2 — the eight strategies backtested on NQ (see the Backtesting pillar).\n\nPhase 3 — native C# Quantower indicators (session volume profile, delta EMA, per-strategy signals), each validated by a parity report against the reference Python pipeline.\n\n## Next\n\nPhase 4 — shadow mode: signals are logged live, zero orders sent, then compared to the backtests.\n\nPhase 5 — supervised semi-automated orders, in simulation first, with safeguards: capped size, emergency stop, execution journal."
+      }
+    }
+  ]
+}
