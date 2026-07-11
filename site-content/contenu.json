@@ -3,8 +3,8 @@
     {
       "id": "historique",
       "titre": {
-        "fr": "Historique — extraction des ticks",
-        "en": "History — tick extraction"
+        "fr": "Historique",
+        "en": "History"
       },
       "accroche": {
         "fr": "Les ticks NQ extraits depuis Quantower, au schéma exact du pilier crypto.",
@@ -22,8 +22,8 @@
     {
       "id": "affichage",
       "titre": {
-        "fr": "Affichage — dashboard temps réel",
-        "en": "Display — real-time dashboard"
+        "fr": "Affichage",
+        "en": "Display"
       },
       "accroche": {
         "fr": "Footprint, heatmap, trades et carnet superposés sur un même graphe (ES / NQ).",
@@ -43,8 +43,8 @@
     {
       "id": "backtesting",
       "titre": {
-        "fr": "Backtesting — LEAN sur NQ",
-        "en": "Backtesting — LEAN on NQ"
+        "fr": "Backtesting",
+        "en": "Backtesting"
       },
       "accroche": {
         "fr": "Les huit stratégies BTC rejouées telles quelles sur les futures NQ.",
@@ -62,8 +62,8 @@
     {
       "id": "automatisation",
       "titre": {
-        "fr": "Automatisation — Quantower",
-        "en": "Automation — Quantower"
+        "fr": "Automatisation",
+        "en": "Automation"
       },
       "accroche": {
         "fr": "Des indicateurs C# validés par parité, vers le trading semi-automatisé — en simulation d'abord.",
