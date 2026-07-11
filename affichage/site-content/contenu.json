@@ -18,7 +18,7 @@
         {
           "id": "vue-complete",
           "type": "figure",
-          "url": "assets/ibkr/img/Capture_02.PNG",
+          "url": "assets/indices/affichage/img/Capture_02.PNG",
           "titre": {
             "fr": "Le tableau de bord complet (ES)",
             "en": "The full dashboard (ES)"
@@ -31,7 +31,7 @@
         {
           "id": "vue-superposee",
           "type": "figure",
-          "url": "assets/ibkr/img/Capture_03.PNG",
+          "url": "assets/indices/affichage/img/Capture_03.PNG",
           "titre": {
             "fr": "Superposition footprint + orderflow + DOM",
             "en": "Footprint + order flow + DOM superposed"
@@ -65,7 +65,7 @@
         {
           "id": "footprint-isole",
           "type": "figure",
-          "url": "assets/ibkr/img/Footprint.PNG",
+          "url": "assets/indices/affichage/img/Footprint.PNG",
           "titre": {
             "fr": "Footprint seul",
             "en": "Footprint alone"
@@ -78,7 +78,7 @@
         {
           "id": "footprint-contexte",
           "type": "figure",
-          "url": "assets/ibkr/img/Capture_01.PNG",
+          "url": "assets/indices/affichage/img/Capture_01.PNG",
           "titre": {
             "fr": "Footprint et fil des prix",
             "en": "Footprint with the price path"
@@ -112,7 +112,7 @@
         {
           "id": "heatmap-isolee",
           "type": "figure",
-          "url": "assets/ibkr/img/Heatmap.PNG",
+          "url": "assets/indices/affichage/img/Heatmap.PNG",
           "titre": {
             "fr": "Heatmap seule",
             "en": "Heatmap alone"
@@ -146,7 +146,7 @@
         {
           "id": "trades-isoles",
           "type": "figure",
-          "url": "assets/ibkr/img/Trades.PNG",
+          "url": "assets/indices/affichage/img/Trades.PNG",
           "titre": {
             "fr": "Scatter des trades",
             "en": "Trade scatter"
@@ -180,7 +180,7 @@
         {
           "id": "dom-isole",
           "type": "figure",
-          "url": "assets/ibkr/img/Orderbook.PNG",
+          "url": "assets/indices/affichage/img/Orderbook.PNG",
           "titre": {
             "fr": "Échelle DOM",
             "en": "DOM scale"
