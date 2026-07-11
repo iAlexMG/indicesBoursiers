@@ -1,4 +1,40 @@
-# Extractor — ticks NQ (Rithmic) → SQLite (Phase 1)
+# Extractor — ticks & barres NQ (Rithmic) → SQLite
+
+Deux stratégies Quantower dans la même DLL (`NqExtractor/`) :
+
+| Stratégie | Donnée | Profondeur | Base produite |
+|---|---|---|---|
+| **NQ Tick Extractor** | ticks Last (avec agresseur) | ~2-3 semaines (limite Rithmic) | `F:\data\NQ-<contrat>.db` |
+| **NQ Bars Extractor** | barres minute (OHLCV + ticks) | **toute la profondeur serveur** (celle du graphique) | `F:\data\NQ-<contrat>-1m.db` |
+
+Les ticks servent au footprint / volume profile (agresseur requis) ; les barres minute
+étendent l'OHLCV loin en arrière pour les backtests. Fusion des deux par
+`normalize_ohlcv.py` (les lignes issues des ticks restent prioritaires) :
+
+```bash
+python normalize_ohlcv.py --dir F:\data\ohlcv\NQ-2026-09 --prefix NQ-CME ^
+                          --bars-db F:\data\NQ-2026-09-1m.db
+```
+
+## NQ Bars Extractor (profondeur maximale)
+
+Au premier run (base vide), la stratégie **sonde vers l'arrière** mois par mois depuis le
+mois courant, jusqu'à N mois vides consécutifs (défaut 3) ou la borne « Sonde max » (défaut
+6 ans) — le journal affiche alors la **profondeur réellement servie** par Rithmic (« plus
+ancien mois servi = … »). Les runs suivants ne re-téléchargent que le mois courant et les
+mois manquants (`_ingested` par mois, idempotent, `INSERT OR REPLACE` sur `ts`). Même mode
+démon « toutes les N heures » que l'extracteur de ticks.
+
+Schéma : `bars(ts PK ms UTC ouverture, open, high, low, close, volume, ticks)` + `_meta`
+(`period_min=1`) + `_ingested('month/YYYY-MM')`.
+
+⚠️ Pas de côté agresseur dans une barre : `buy_volume` reste vide sur les lignes issues des
+barres, et `features_vp.csv` (volume profile) reste borné à la fenêtre de ticks.
+
+> Build : Quantower **v1.146.14+** tourne sous **.NET 10** → le projet cible `net10.0`
+> (mesuré 2026-07-10 ; v1.145.x était net8.0). `deploy.ps1` choisit le TFM le plus récent.
+
+# NQ Tick Extractor — ticks NQ (Rithmic) → SQLite (Phase 1)
 
 Stratégie Quantower (`NQ Tick Extractor`) qui télécharge les ticks NQ via la connexion Rithmic
 **déjà authentifiée dans Quantower** et les écrit dans `F:\data\NQ-<contrat>.db`, au **schéma

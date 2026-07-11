@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <!-- Suivre le runtime du Quantower installé : v1.145.x = net8.0, v1.146.14+ = net10.0
+         (mesuré 2026-07-10 : BusinessLayer référence System.Runtime 10.0.0.0). -->
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>NqTickExtractor</AssemblyName>
