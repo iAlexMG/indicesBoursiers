@@ -98,6 +98,17 @@ public sealed class NqBarsExtractorStrategy : Strategy
         var now = DateTime.UtcNow;
         var thisMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
+        // CANARI : re-télécharger une donnée connue non vide. Si le serveur d'historique est
+        // muet (maintenance week-end Rithmic…), on N'ÉCRIT RIEN : ni purge, ni marquage, ni
+        // sonde — la base reste intacte et la passe sera retentée au prochain cycle.
+        if (!ServeurHistoriqueVivant(conn, s))
+        {
+            this.LogInfo("⚠️ Serveur d'historique MUET (maintenance ?) : passe annulée, base intacte. "
+                       + "Nouvel essai au prochain cycle.");
+            LogFooter(conn);
+            return;
+        }
+
         if (LastIngestedMonth(conn) is DateTime last)
             CollectForward(conn, s, last.AddMonths(1) <= thisMonth ? last.AddMonths(1) : thisMonth, thisMonth);
         else
@@ -106,23 +117,43 @@ public sealed class NqBarsExtractorStrategy : Strategy
         LogFooter(conn);
     }
 
+    /// <summary>Canari : la fin du dernier mois non vide déjà ingéré doit re-répondre.
+    /// Premier run (rien d'ingéré) : pas de référence, on laisse passer.</summary>
+    private bool ServeurHistoriqueVivant(SQLiteConnection conn, Symbol s)
+    {
+        using var cmd = new SQLiteCommand(
+            "SELECT name FROM _ingested WHERE name LIKE 'month/%' AND rows > 0 "
+          + "ORDER BY name DESC LIMIT 1", conn);
+        if (cmd.ExecuteScalar() is not string name) return true;
+        var m = DateTime.ParseExact(name.Substring(6), "yyyy-MM", CultureInfo.InvariantCulture);
+        var monthEnd = new DateTime(m.Year, m.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1);
+        HistoricalData? hd = null;
+        try
+        {
+            hd = s.GetHistory(new Period(BasePeriod.Minute, PeriodMinutes), HistoryType.Last,
+                              monthEnd.AddDays(-3), monthEnd);
+            if (hd is not null)
+                foreach (var raw in hd)
+                    if (raw is HistoryItemBar) return true;
+        }
+        finally { hd?.Dispose(); }
+        return false;
+    }
+
     /// <summary>Base déjà amorcée : compléter du dernier mois marqué jusqu'au mois courant.</summary>
     private void CollectForward(SQLiteConnection conn, Symbol s, DateTime fromMonth, DateTime thisMonth)
     {
-        // Purge du recouvrement (mois courant partiel des runs précédents) avant ré-insertion.
-        using (var del = new SQLiteCommand("DELETE FROM bars WHERE ts >= @from", conn))
-        {
-            del.Parameters.AddWithValue("@from", ToMs(fromMonth));
-            int n = del.ExecuteNonQuery();
-            if (n > 0) this.LogInfo($"Purge reliquat : {n} barres (≥ {fromMonth:yyyy-MM})");
-        }
         long grand = 0;
         for (var m = fromMonth; m <= thisMonth; m = m.AddMonths(1))
         {
             int rows = IngestMonth(conn, s, m);
             grand += rows;
-            MarkIfComplete(conn, m, rows, thisMonth);
-            this.LogInfo($"{m:yyyy-MM} : {rows,7} barres{(m < thisMonth ? " [marqué]" : " [courant, partiel]")}");
+            // Marquage prudent : jamais sur « 0 reçue alors qu'on avait des données »
+            // (serveur tombé en cours de passe) — le mois sera retenté.
+            if (rows > 0 || !ADesLignes(conn, m, m.AddMonths(1)))
+                MarkIfComplete(conn, m, rows, thisMonth);
+            this.LogInfo($"{m:yyyy-MM} : {rows,7} barres{(m < thisMonth ? " [marqué]" : " [courant, partiel]")}"
+                       + (rows == 0 ? " (0 reçue : existant conservé)" : ""));
         }
         this.LogInfo($"Collecte terminée : +{grand} barres sur cette passe.");
     }
@@ -150,7 +181,8 @@ public sealed class NqBarsExtractorStrategy : Strategy
         this.LogInfo($"Sonde terminée : +{grand} barres.");
     }
 
-    /// <summary>Télécharge et insère un mois de barres (INSERT OR REPLACE, ts = ouverture UTC).</summary>
+    /// <summary>Télécharge un mois de barres puis REMPLACE la plage en base — uniquement si le
+    /// téléchargement a rapporté quelque chose (0 reçue = on ne touche pas à l'existant).</summary>
     private int IngestMonth(SQLiteConnection conn, Symbol s, DateTime monthStart)
     {
         var monthEnd = monthStart.AddMonths(1);
@@ -171,7 +203,16 @@ public sealed class NqBarsExtractorStrategy : Strategy
         }
         finally { hd?.Dispose(); }
 
+        if (bars.Count == 0) return 0; // rien reçu -> on conserve l'existant tel quel
+
         using var tx = conn.BeginTransaction();
+        // Remplacement de la plage : purge APRÈS un téléchargement réussi seulement.
+        using (var del = new SQLiteCommand("DELETE FROM bars WHERE ts >= @a AND ts < @b", conn, tx))
+        {
+            del.Parameters.AddWithValue("@a", ToMs(monthStart));
+            del.Parameters.AddWithValue("@b", ToMs(monthEnd));
+            del.ExecuteNonQuery();
+        }
         using var cmd = new SQLiteCommand(
             "INSERT OR REPLACE INTO bars(ts,open,high,low,close,volume,ticks) "
           + "VALUES(@ts,@o,@h,@l,@c,@v,@n)", conn, tx);
@@ -190,6 +231,14 @@ public sealed class NqBarsExtractorStrategy : Strategy
         }
         tx.Commit();
         return bars.Count;
+    }
+
+    private static bool ADesLignes(SQLiteConnection c, DateTime de, DateTime a)
+    {
+        using var cmd = new SQLiteCommand("SELECT 1 FROM bars WHERE ts >= @a AND ts < @b LIMIT 1", c);
+        cmd.Parameters.AddWithValue("@a", ToMs(de));
+        cmd.Parameters.AddWithValue("@b", ToMs(a));
+        return cmd.ExecuteScalar() is not null;
     }
 
     private void MarkIfComplete(SQLiteConnection conn, DateTime month, int rows, DateTime thisMonth)

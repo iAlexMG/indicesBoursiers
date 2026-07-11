@@ -90,6 +90,17 @@ public sealed class NqTickExtractorStrategy : Strategy
         EnsureSchema(conn);
         WriteMeta(conn, s);
 
+        // CANARI : re-télécharger un jour connu non vide. Si le serveur d'historique est muet
+        // (maintenance week-end Rithmic…), on N'ÉCRIT RIEN : ni purge, ni marquage, ni sonde —
+        // la base reste intacte et la passe sera retentée au prochain cycle.
+        if (!ServeurHistoriqueVivant(conn, s))
+        {
+            this.LogInfo("⚠️ Serveur d'historique MUET (maintenance ?) : passe annulée, base intacte. "
+                       + "Nouvel essai au prochain cycle.");
+            LogFooter(conn);
+            return;
+        }
+
         // Jour de reprise : lendemain du dernier jour complet marqué, sinon aujourd'hui
         // (la sonde ARRIÈRE, plus bas, va chercher toute la profondeur disponible).
         var today = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
@@ -98,20 +109,18 @@ public sealed class NqTickExtractorStrategy : Strategy
         long grand = 0;
         if (fromDay <= today)
         {
-            // Purge du reliquat non marqué (jour courant partiel des runs précédents) : c'est la
-            // QUEUE de la table (rowids les plus hauts) → ré-insertion conserve l'ordre chrono.
-            long fromMs = ToMs(fromDay);
-            using (var del = new SQLiteCommand("DELETE FROM trades WHERE ts >= @from", conn))
-            { del.Parameters.AddWithValue("@from", fromMs); int n = del.ExecuteNonQuery(); if (n > 0) this.LogInfo($"Purge reliquat : {n} ticks (≥ {fromDay:yyyy-MM-dd})"); }
-
             for (var day = fromDay; day <= today; day = day.AddDays(1))
             {
                 var dayEnd = day.AddDays(1);
                 int rows = IngestDay(conn, s, day, dayEnd);
                 grand += rows;
                 bool complete = dayEnd <= today; // jour entièrement passé
-                if (complete) MarkDay(conn, day, rows);
-                this.LogInfo($"{day:yyyy-MM-dd} : {rows,8} ticks{(complete ? " [marqué]" : " [courant, partiel]")}");
+                // Marquage prudent : jamais sur « 0 reçu alors qu'on avait des données »
+                // (serveur tombé en cours de passe) — le jour sera retenté.
+                if (complete && (rows > 0 || !ADesLignes(conn, day, dayEnd)))
+                    MarkDay(conn, day, rows);
+                this.LogInfo($"{day:yyyy-MM-dd} : {rows,8} ticks{(complete ? " [marqué]" : " [courant, partiel]")}"
+                           + (rows == 0 ? " (0 reçu : existant conservé)" : ""));
             }
             this.LogInfo($"Collecte avant : +{grand} ticks sur cette passe.");
         }
@@ -195,6 +204,38 @@ public sealed class NqTickExtractorStrategy : Strategy
         EnsureTsIndex(c); // l'index est tombé avec l'ancienne table
     }
 
+    /// <summary>Canari : le dernier jour non vide déjà ingéré doit re-répondre.
+    /// Premier run (rien d'ingéré) : pas de référence, on laisse passer.</summary>
+    private bool ServeurHistoriqueVivant(SQLiteConnection conn, Symbol s)
+    {
+        using var cmd = new SQLiteCommand(
+            "SELECT name FROM _ingested WHERE name LIKE 'day/%' AND rows > 0 "
+          + "ORDER BY name DESC LIMIT 1", conn);
+        if (cmd.ExecuteScalar() is not string name) return true;
+        if (!DateTime.TryParse(name.Substring(4), CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var d))
+            return true;
+        var day = DateTime.SpecifyKind(d.Date, DateTimeKind.Utc);
+        HistoricalData? hd = null;
+        try
+        {
+            hd = s.GetTickHistory(HistoryType.Last, day, day.AddDays(1));
+            if (hd is not null)
+                foreach (var raw in hd)
+                    if (raw is HistoryItemLast) return true; // premier tick suffit
+        }
+        finally { hd?.Dispose(); }
+        return false;
+    }
+
+    private static bool ADesLignes(SQLiteConnection c, DateTime de, DateTime a)
+    {
+        using var cmd = new SQLiteCommand("SELECT 1 FROM trades WHERE ts >= @a AND ts < @b LIMIT 1", c);
+        cmd.Parameters.AddWithValue("@a", ToMs(de));
+        cmd.Parameters.AddWithValue("@b", ToMs(a));
+        return cmd.ExecuteScalar() is not null;
+    }
+
     private void MarkDay(SQLiteConnection conn, DateTime day, int rows)
     {
         using var mk = new SQLiteCommand("INSERT OR REPLACE INTO _ingested VALUES(@n,@r,@a)", conn);
@@ -219,7 +260,8 @@ public sealed class NqTickExtractorStrategy : Strategy
         cmd.ExecuteNonQuery();
     }
 
-    /// <summary>Télécharge et insère un jour de ticks Last, triés chronologiquement.</summary>
+    /// <summary>Télécharge un jour de ticks Last puis REMPLACE la plage en base — uniquement si
+    /// le téléchargement a rapporté quelque chose (0 reçu = on ne touche pas à l'existant).</summary>
     private int IngestDay(SQLiteConnection conn, Symbol s, DateTime dayStart, DateTime dayEnd)
     {
         var ticks = new List<(long ts, double price, double size, string side)>();
@@ -242,10 +284,21 @@ public sealed class NqTickExtractorStrategy : Strategy
         }
         finally { hd?.Dispose(); }
 
+        if (ticks.Count == 0) return 0; // rien reçu -> on conserve l'existant tel quel
+
         ticks.Sort((a, b) => a.ts.CompareTo(b.ts)); // rowid croissant = chrono (hypothèse candles.py)
 
-        // trade_id NON spécifié → rowid = max+1 : append, ordre chronologique préservé.
         using var tx = conn.BeginTransaction();
+        // Remplacement de la plage : purge APRÈS un téléchargement réussi seulement. Pour le
+        // jour courant/reliquat, ces lignes sont la QUEUE de la table (rowids les plus hauts)
+        // → ré-insertion en append conserve l'ordre chronologique.
+        using (var del = new SQLiteCommand("DELETE FROM trades WHERE ts >= @a AND ts < @b", conn, tx))
+        {
+            del.Parameters.AddWithValue("@a", ToMs(dayStart));
+            del.Parameters.AddWithValue("@b", ToMs(dayEnd));
+            del.ExecuteNonQuery();
+        }
+        // trade_id NON spécifié → rowid = max+1 : append, ordre chronologique préservé.
         using var cmd = new SQLiteCommand(
             "INSERT INTO trades(ts,price,size,side) VALUES(@ts,@p,@sz,@sd)", conn, tx);
         var pTs = cmd.Parameters.Add("@ts", System.Data.DbType.Int64);
