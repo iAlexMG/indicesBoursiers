@@ -8,12 +8,15 @@ namespace NqTickExtractor;
 /// Phase 1 — extracteur incrémental de ticks NQ (Rithmic) vers SQLite, au schéma EXACT du
 /// projet frère (`trades(trade_id PK, ts, price, size, side)` + `_meta` k/v + `_ingested`),
 /// pour que toute la chaîne Python aval (candles.py, volume_profile_features.py) fonctionne
-/// telle quelle. Tourne DANS Quantower (connexion Rithmic live). Profondeur Rithmic ≈ 2 semaines
-/// (mesuré Phase 0) → lancer quotidiennement pour accumuler l'historique irrécupérable autrement.
+/// telle quelle. Tourne DANS Quantower (connexion Rithmic live). La profondeur tick Rithmic est
+/// LIMITÉE (Phase 0 : « ≥ 20 jours, probablement plus ») → une SONDE ARRIÈRE mesure la limite
+/// réelle au premier run et aspire tout ; ensuite, lancer quotidiennement pour accumuler
+/// l'historique irrécupérable autrement.
 ///
 /// Idempotent : les jours complets passés sont marqués dans `_ingested` (jamais re-téléchargés) ;
 /// le jour courant (partiel) et le reliquat non marqué sont supprimés puis ré-insérés à chaque
-/// run. Insertion en ordre chronologique → `trade_id` (rowid) croissant = hypothèse de candles.py.
+/// run. Insertion en ordre chronologique → `trade_id` (rowid) croissant = hypothèse de candles.py
+/// (après un backfill arrière, la table est réordonnancée pour préserver ce contrat).
 /// </summary>
 public sealed class NqTickExtractorStrategy : Strategy
 {
@@ -23,10 +26,13 @@ public sealed class NqTickExtractorStrategy : Strategy
     [InputParameter("Base SQLite (vide = auto F:\\data\\NQ-<contrat>.db)", 1)]
     public string DbPath = "";
 
-    [InputParameter("Backfill max (jours) si base vide", 2, 1, 60, 1, 0)]
-    public int MaxBackfillDays = 20;
+    [InputParameter("Sonde arrière max (jours)", 2, 1, 365, 1, 0)]
+    public int MaxBackfillDays = 90;
 
-    [InputParameter("Collecte auto toutes les N heures (0 = one-shot)", 3, 0, 24, 1, 0)]
+    [InputParameter("Sonde : arrêt après N jours vides consécutifs", 3, 1, 30, 1, 0)]
+    public int EmptyDaysStop = 7;
+
+    [InputParameter("Collecte auto toutes les N heures (0 = one-shot)", 4, 0, 24, 1, 0)]
     public int IntervalHours = 6;
 
     private static readonly DateTime Epoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -84,40 +90,133 @@ public sealed class NqTickExtractorStrategy : Strategy
         EnsureSchema(conn);
         WriteMeta(conn, s);
 
-        // Jour de reprise : lendemain du dernier jour complet marqué, sinon backfill borné.
+        // Jour de reprise : lendemain du dernier jour complet marqué, sinon aujourd'hui
+        // (la sonde ARRIÈRE, plus bas, va chercher toute la profondeur disponible).
         var today = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
-        DateTime fromDay = LastIngestedDay(conn) is DateTime last
-            ? last.AddDays(1)
-            : today.AddDays(-MaxBackfillDays);
-        if (fromDay > today) { this.LogInfo("Déjà à jour (aucun jour à collecter)."); LogFooter(conn); return; }
-
-        // Purge du reliquat non marqué (jour courant partiel des runs précédents) : c'est la
-        // QUEUE de la table (rowids les plus hauts) → ré-insertion conserve l'ordre chrono.
-        long fromMs = ToMs(fromDay);
-        using (var del = new SQLiteCommand("DELETE FROM trades WHERE ts >= @from", conn))
-        { del.Parameters.AddWithValue("@from", fromMs); int n = del.ExecuteNonQuery(); if (n > 0) this.LogInfo($"Purge reliquat : {n} ticks (≥ {fromDay:yyyy-MM-dd})"); }
+        DateTime fromDay = LastIngestedDay(conn) is DateTime last ? last.AddDays(1) : today;
 
         long grand = 0;
-        for (var day = fromDay; day <= today; day = day.AddDays(1))
+        if (fromDay <= today)
         {
-            var dayEnd = day.AddDays(1);
-            int rows = IngestDay(conn, s, day, dayEnd);
-            grand += rows;
-            bool complete = dayEnd <= today; // jour entièrement passé
-            if (complete)
-                using (var mk = new SQLiteCommand("INSERT OR REPLACE INTO _ingested VALUES(@n,@r,@a)", conn))
-                {
-                    mk.Parameters.AddWithValue("@n", $"day/{day:yyyy-MM-dd}");
-                    mk.Parameters.AddWithValue("@r", rows);
-                    mk.Parameters.AddWithValue("@a", DateTime.UtcNow.ToString("o"));
-                    mk.ExecuteNonQuery();
-                }
-            this.LogInfo($"{day:yyyy-MM-dd} : {rows,8} ticks{(complete ? " [marqué]" : " [courant, partiel]")}");
+            // Purge du reliquat non marqué (jour courant partiel des runs précédents) : c'est la
+            // QUEUE de la table (rowids les plus hauts) → ré-insertion conserve l'ordre chrono.
+            long fromMs = ToMs(fromDay);
+            using (var del = new SQLiteCommand("DELETE FROM trades WHERE ts >= @from", conn))
+            { del.Parameters.AddWithValue("@from", fromMs); int n = del.ExecuteNonQuery(); if (n > 0) this.LogInfo($"Purge reliquat : {n} ticks (≥ {fromDay:yyyy-MM-dd})"); }
+
+            for (var day = fromDay; day <= today; day = day.AddDays(1))
+            {
+                var dayEnd = day.AddDays(1);
+                int rows = IngestDay(conn, s, day, dayEnd);
+                grand += rows;
+                bool complete = dayEnd <= today; // jour entièrement passé
+                if (complete) MarkDay(conn, day, rows);
+                this.LogInfo($"{day:yyyy-MM-dd} : {rows,8} ticks{(complete ? " [marqué]" : " [courant, partiel]")}");
+            }
+            this.LogInfo($"Collecte avant : +{grand} ticks sur cette passe.");
         }
+        else this.LogInfo("Collecte avant : déjà à jour.");
+
+        grand += ProbeBackward(conn, s, today);
 
         EnsureTsIndex(conn);
         this.LogInfo($"Extraction terminée : +{grand} ticks sur cette passe.");
         LogFooter(conn);
+    }
+
+    /// <summary>
+    /// Sonde ARRIÈRE : descend jour par jour SOUS le plus ancien tick en base et aspire tout
+    /// ce que Rithmic sert encore, jusqu'à `EmptyDaysStop` jours vides consécutifs (week-ends
+    /// et fériés compris, d'où le défaut 7) ou `MaxBackfillDays` jours sondés. La profondeur
+    /// mesurée est mémorisée dans _meta (tick_probe_oldest) → jamais re-sondée : la fenêtre
+    /// Rithmic est glissante, l'ancien ne réapparaît pas.
+    /// Les jours arrière étant insérés APRÈS des jours plus récents, la table est ensuite
+    /// RÉORDONNANCÉE (rowid croissant = chrono, contrat de candles.py / features_vp).
+    /// </summary>
+    private long ProbeBackward(SQLiteConnection conn, Symbol s, DateTime today)
+    {
+        if (MetaGet(conn, "tick_probe_oldest") is not null) return 0; // déjà mesurée
+
+        DateTime oldestKnown;
+        using (var cmd = new SQLiteCommand("SELECT MIN(ts) FROM trades", conn))
+            oldestKnown = cmd.ExecuteScalar() is long ms ? FromMs(ms).Date : today;
+
+        int emptyRun = 0, probed = 0;
+        long grand = 0;
+        DateTime? oldestServed = null;
+        for (var day = oldestKnown.AddDays(-1);
+             emptyRun < EmptyDaysStop && probed < MaxBackfillDays;
+             day = day.AddDays(-1), probed++)
+        {
+            var d = DateTime.SpecifyKind(day, DateTimeKind.Utc);
+            int rows = IngestDay(conn, s, d, d.AddDays(1));
+            grand += rows;
+            MarkDay(conn, d, rows);
+            if (rows == 0) { emptyRun++; this.LogInfo($"{d:yyyy-MM-dd} :        0 tick  (vide {emptyRun}/{EmptyDaysStop})"); continue; }
+            emptyRun = 0;
+            oldestServed = d;
+            this.LogInfo($"{d:yyyy-MM-dd} : {rows,8} ticks [marqué, arrière]");
+        }
+
+        if (emptyRun >= EmptyDaysStop)
+        {
+            var borne = (oldestServed ?? oldestKnown);
+            MetaSet(conn, "tick_probe_oldest", borne.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+            this.LogInfo($"PROFONDEUR TICKS MESURÉE : plus ancien jour servi = {borne:yyyy-MM-dd} "
+                       + $"({(today - borne).TotalDays:F0} jours). Sonde close (ne sera plus relancée).");
+        }
+        else if (probed >= MaxBackfillDays)
+            this.LogInfo($"Sonde arrêtée à la borne MaxBackfillDays ({MaxBackfillDays} j) — il y a peut-être plus ancien ; relancer avec une borne plus large.");
+
+        if (grand > 0)
+        {
+            this.LogInfo($"Sonde arrière : +{grand} ticks → réordonnancement chronologique de la table…");
+            ResortChronologically(conn);
+        }
+        return grand;
+    }
+
+    /// <summary>Reconstruit `trades` triée par ts (rowid croissant = chrono, contrat aval).</summary>
+    private void ResortChronologically(SQLiteConnection c)
+    {
+        using var tx = c.BeginTransaction();
+        Exec(c, "DROP TABLE IF EXISTS trades_sorted");
+        Exec(c, @"CREATE TABLE trades_sorted(
+                    trade_id INTEGER PRIMARY KEY,
+                    ts       INTEGER NOT NULL,
+                    price    REAL    NOT NULL,
+                    size     REAL    NOT NULL,
+                    side     TEXT    NOT NULL)");
+        Exec(c, "INSERT INTO trades_sorted(ts,price,size,side) "
+              + "SELECT ts,price,size,side FROM trades ORDER BY ts, trade_id");
+        Exec(c, "DROP TABLE trades");
+        Exec(c, "ALTER TABLE trades_sorted RENAME TO trades");
+        tx.Commit();
+        EnsureTsIndex(c); // l'index est tombé avec l'ancienne table
+    }
+
+    private void MarkDay(SQLiteConnection conn, DateTime day, int rows)
+    {
+        using var mk = new SQLiteCommand("INSERT OR REPLACE INTO _ingested VALUES(@n,@r,@a)", conn);
+        mk.Parameters.AddWithValue("@n", $"day/{day:yyyy-MM-dd}");
+        mk.Parameters.AddWithValue("@r", rows);
+        mk.Parameters.AddWithValue("@a", DateTime.UtcNow.ToString("o"));
+        mk.ExecuteNonQuery();
+    }
+
+    private static string? MetaGet(SQLiteConnection c, string k)
+    {
+        using var cmd = new SQLiteCommand("SELECT v FROM _meta WHERE k=@k", c);
+        cmd.Parameters.AddWithValue("@k", k);
+        return cmd.ExecuteScalar() as string;
+    }
+
+    private static void MetaSet(SQLiteConnection c, string k, string v)
+    {
+        using var cmd = new SQLiteCommand("INSERT OR REPLACE INTO _meta VALUES(@k,@v)", c);
+        cmd.Parameters.AddWithValue("@k", k);
+        cmd.Parameters.AddWithValue("@v", v);
+        cmd.ExecuteNonQuery();
     }
 
     /// <summary>Télécharge et insère un jour de ticks Last, triés chronologiquement.</summary>

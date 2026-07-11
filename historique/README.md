@@ -67,7 +67,14 @@ sans côté agresseur (0,0002 % mesuré) sont exclus (jamais de `side` vide).
 
 - Les **jours complets passés** sont marqués dans `_ingested` et jamais re-téléchargés.
 - Le **jour courant** (partiel) est purgé puis ré-inséré à chaque run → relancer est sûr.
-- Base vide → backfill des `MaxBackfillDays` derniers jours (≤ ~2 sem. de profondeur Rithmic).
+- **Sonde arrière** (ajoutée 2026-07-10) : au premier run après cette version, la stratégie
+  descend jour par jour **sous** le plus ancien tick en base et aspire tout ce que Rithmic
+  sert encore, jusqu'à N jours vides consécutifs (défaut 7 — couvre week-ends et fériés) ou
+  la borne « Sonde arrière max » (défaut 90 j). La profondeur mesurée est journalisée
+  (« PROFONDEUR TICKS MESURÉE ») et mémorisée dans `_meta(tick_probe_oldest)` → la sonde ne
+  retourne plus en arrière ensuite (fenêtre Rithmic glissante : l'ancien ne réapparaît pas).
+  Après un backfill arrière, la table est **réordonnancée** (rowid croissant = chronologique,
+  le contrat de `candles.py`/`features_vp`).
 
 ## Collecte automatique (démon)
 
