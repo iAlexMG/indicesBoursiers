@@ -51,12 +51,12 @@
         "en": "The eight BTC strategies replayed as-is on the NQ futures."
       },
       "statut": {
-        "fr": "À consolider",
-        "en": "Being consolidated"
+        "fr": "8 stratégies",
+        "en": "8 strategies"
       },
       "texte": {
-        "fr": "## Le portage\n\nLes huit stratégies backtestées sur BTCUSDT (pilier backtesting du projet crypto) ont été rejouées telles quelles sur les futures NQ avec le moteur LEAN : mêmes règles, mêmes garde-fous de causalité, données de ticks extraites de Quantower.\n\n## Résultats\n\nHuit backtests sur huit menés à terme ; la stratégie volume profile ressort en tête (+2,9 %, drawdown 0,9 % sur la période testée). Les écarts avec BTC sont commentés dans le dépôt.\n\n## À consolider\n\nLe socle LEAN partagé (chargement des données, sessions, modèle de frais NQ) vit encore côté crypto : il reste à le rapatrier pour rendre ce pilier autonome.",
-        "en": "## The port\n\nThe eight strategies backtested on BTCUSDT (the crypto project's backtesting pillar) were replayed as-is on the NQ futures with the LEAN engine: same rules, same causality safeguards, tick data extracted from Quantower.\n\n## Results\n\nEight backtests out of eight completed; the volume-profile strategy comes out on top (+2.9%, 0.9% drawdown over the tested period). The gaps versus BTC are discussed in the repository.\n\n## To consolidate\n\nThe shared LEAN scaffolding (data loading, sessions, NQ fee model) still lives on the crypto side: it remains to be brought over to make this pillar self-contained."
+        "fr": "## Le portage\n\nLes huit stratégies backtestées sur BTCUSDT (pilier backtesting du projet crypto) ont été rejouées telles quelles sur les futures NQ avec le moteur LEAN : mêmes règles, mêmes garde-fous de causalité, données de ticks extraites de Quantower.\n\n## Résultats\n\nHuit backtests sur huit menés à terme ; la stratégie volume profile ressort en tête (+2,9 %, drawdown 0,9 % sur la période testée). Les écarts avec BTC sont commentés dans le dépôt.\n\n## Un pilier autonome\n\nToute la chaîne de données vit dans ce dépôt : extraction des ticks, normalisation OHLCV, génération des features volume profile (sessions Asia/London/NY, POC/VAH/VAL) et modèle de frais par contrat. La régénération des features a été validée bit à bit contre la chaîne d'origine.",
+        "en": "## The port\n\nThe eight strategies backtested on BTCUSDT (the crypto project's backtesting pillar) were replayed as-is on the NQ futures with the LEAN engine: same rules, same causality safeguards, tick data extracted from Quantower.\n\n## Results\n\nEight backtests out of eight completed; the volume-profile strategy comes out on top (+2.9%, 0.9% drawdown over the tested period). The gaps versus BTC are discussed in the repository.\n\n## A self-contained pillar\n\nThe whole data chain lives in this repository: tick extraction, OHLCV normalization, volume-profile feature generation (Asia/London/NY sessions, POC/VAH/VAL) and the per-contract fee model. The feature regeneration was validated bit-for-bit against the original chain."
       }
     },
     {
