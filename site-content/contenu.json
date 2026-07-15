@@ -63,13 +63,32 @@
         "en": "Footprint, heatmap, trades and order book superposed on a single chart (ES / NQ)."
       },
       "intro": {
-        "fr": "Un tableau de bord d'orderflow temps réel pour les futures ES et NQ d'Interactive Brokers : footprint, heatmap de liquidité, trades et carnet d'ordres superposés sur un même graphe, façon Bookmap et Quantower. Construit en Python (PyQt5, pyqtgraph, ib_insync), avec une source de données unique derrière laquelle on permute le flux réel d'IBKR et un mode démo synthétique. Parcourez les couches une à une — le flux qui les alimente est documenté au pilier Temps réel.",
-        "en": "A real-time order-flow dashboard for the ES and NQ futures on Interactive Brokers: footprint, liquidity heatmap, trades and order book superposed on a single chart, Bookmap- and Quantower-style. Built in Python (PyQt5, pyqtgraph, ib_insync), with a single data source behind which the real IBKR feed and a synthetic demo mode are interchangeable. Walk through the layers one by one — the feed behind them is documented in the Real time pillar."
+        "fr": "Un tableau de bord d'orderflow temps réel pour les futures ES et NQ d'Interactive Brokers : footprint, heatmap de liquidité, trades et carnet d'ordres superposés sur un même graphe, façon Bookmap et Quantower. Construit en Python (PyQt5, pyqtgraph, ib_insync), avec une source de données unique derrière laquelle on permute le flux réel d'IBKR et un mode démo synthétique. La capture ci-dessous les montre toutes à la fois ; en dessous, chacune est reprise seule, avec la méthode qui la reconstruit. Le flux qui les alimente est documenté au pilier Temps réel.",
+        "en": "A real-time order-flow dashboard for the ES and NQ futures on Interactive Brokers: footprint, liquidity heatmap, trades and order book superposed on a single chart, Bookmap- and Quantower-style. Built in Python (PyQt5, pyqtgraph, ib_insync), with a single data source behind which the real IBKR feed and a synthetic demo mode are interchangeable. The capture below shows all of them at once; underneath, each one is taken on its own, with the method that rebuilds it. The feed behind them is documented in the Real time pillar."
       },
       "statut": {
         "fr": "4 couches",
         "en": "4 layers"
       },
+      "texte": {
+        "fr": "## L'idée\n\nReproduire les graphiques d'un terminal d'orderflow professionnel — un mélange de Bookmap (liquidité et trades) et de Quantower (footprint) — dans une seule fenêtre Python. Chaque symbole, ES et NQ, a son graphe ; les quatre couches partagent exactement le même axe temps + prix, si bien que tout est aligné au tick près.\n\n## Les quatre couches\n\nLe footprint (chandeliers détaillés, volume par niveau de prix), la heatmap (intensité de la liquidité du carnet dans le temps), le scatter des trades (chaque transaction = un point) et l'échelle DOM (le carnet courant, à droite). On les affiche ou on les masque à la volée par de simples cases à cocher, et la résolution d'une bougie se règle de 1 s à 5 min.\n\n## Deux sources, une même vue\n\nDerrière l'affichage, une interface de données unique (FlowStore) : la vue ignore si les données viennent du flux réel d'IBKR ou d'un générateur synthétique. On bascule de l'un à l'autre sans toucher au rendu.\n\n## Pile technique\n\nPython, PyQt5 et pyqtgraph pour un rendu natif fluide (mise à jour par QTimer, sans bloquer la boucle d'événements). Connexion temps réel via ib_insync. Seul l'onglet visible est redessiné : le coût d'affichage reste constant quel que soit le nombre de symboles.",
+        "en": "## The idea\n\nReproduce the charts of a professional order-flow terminal — a blend of Bookmap (liquidity and trades) and Quantower (footprint) — inside a single Python window. Each symbol, ES and NQ, has its own chart; the four layers share exactly the same time + price axis, so everything is aligned to the tick.\n\n## The four layers\n\nThe footprint (detailed candles, volume per price level), the heatmap (intensity of order-book liquidity over time), the trade scatter (each transaction = one point) and the DOM scale (the current book, on the right). They toggle on and off on the fly with simple checkboxes, and a candle's resolution adjusts from 1 s to 5 min.\n\n## Two sources, one view\n\nBehind the display sits a single data interface (FlowStore): the view doesn't know whether the data comes from the real IBKR feed or from a synthetic generator. You switch from one to the other without touching the rendering.\n\n## Tech stack\n\nPython, PyQt5 and pyqtgraph for smooth native rendering (refreshed by a QTimer, without blocking the event loop). Real-time connection via ib_insync. Only the visible tab is redrawn: the rendering cost stays constant whatever the number of symbols."
+      },
+      "items": [
+        {
+          "id": "terminal",
+          "type": "figure",
+          "url": "assets/indices/affichage/img/All.PNG",
+          "titre": {
+            "fr": "Le tableau de bord — les quatre couches superposées (ES)",
+            "en": "The dashboard — the four layers stacked (ES)"
+          },
+          "description": {
+            "fr": "Une seule capture, les quatre couches à la fois : le footprint en chandeliers chiffrés, le scatter des trades, la heatmap en fond, l'échelle DOM sur le bord droit. Les trois pages qui suivent démontent cette image.",
+            "en": "A single capture, all four layers at once: the footprint as numbered candles, the trade scatter, the heatmap in the background, the DOM scale on the right edge. The three pages that follow take this image apart."
+          }
+        }
+      ],
       "sousHub": true,
       "inclure": "affichage"
     },
