@@ -20,18 +20,41 @@
       }
     },
     {
+      "id": "temps-reel",
+      "titre": {
+        "fr": "Temps réel",
+        "en": "Real time"
+      },
+      "accroche": {
+        "fr": "Des données plus pauvres qu'un exchange crypto, un marché qui ferme — et comment on compose avec.",
+        "en": "Thinner data than a crypto exchange, a market that closes — and how it's handled."
+      },
+      "intro": {
+        "fr": "Reproduire un terminal d'orderflow sur IBKR impose deux réalités : des données plus pauvres que celles d'un exchange crypto, et un marché qui ferme. Le projet compose avec les deux.",
+        "en": "Reproducing an order-flow terminal on IBKR imposes two realities: thinner data than a crypto exchange's, and a market that closes. The project works with both."
+      },
+      "statut": {
+        "fr": "IBKR — temps réel, différé, démo",
+        "en": "IBKR — real time, delayed, demo"
+      },
+      "texte": {
+        "fr": "## La contrainte IBKR\n\nUn exchange crypto pousse en continu trades et carnet complets ; IBKR, non. Le côté agresseur n'est pas fourni (on l'infère), et le carnet L2 — indispensable à la heatmap et au DOM — exige un abonnement CME en temps réel. En données différées (gratuites, ~15 min), le footprint et les trades se remplissent quand même, mais la heatmap et le DOM restent vides.\n\n## Marché fermé = aucun tick\n\nLe CME ferme le week-end : plus rien ne circule. Impossible, alors, de vérifier l'affichage en direct — un vrai problème quand on développe le soir ou la fin de semaine.\n\n## Le mode démo\n\nD'où un générateur de données synthétiques : marche aléatoire du prix, trades acheteurs / vendeurs, carnet animé. Il préremplit l'historique au lancement pour que la fenêtre soit déjà pleine, sans connexion ni abonnement. Comme il écrit dans le même FlowStore que le flux réel, il valide tout l'affichage, marché ouvert ou non.\n\n## Robustesse de la connexion\n\nConnexion à TWS / IB Gateway en lecture seule (readonly), reconnexions gérées proprement, et fermeture propre qui arrête le timer, déconnecte IB et stoppe la boucle asyncio — fini les spirales de reconnexion et les crashs de QTimer.",
+        "en": "## The IBKR constraint\n\nA crypto exchange continuously pushes full trades and book; IBKR does not. The aggressor side isn't provided (it's inferred), and the L2 book — essential to the heatmap and the DOM — requires a real-time CME subscription. On delayed data (free, ~15 min), the footprint and trades still fill in, but the heatmap and DOM stay empty.\n\n## Market closed = no ticks\n\nThe CME closes on weekends: nothing flows. Checking the display live then becomes impossible — a real problem when you develop in the evening or on the weekend.\n\n## Demo mode\n\nHence a synthetic data generator: random walk of the price, buy / sell trades, an animated book. It pre-fills the history at launch so the window is already full, with no connection and no subscription. Since it writes into the same FlowStore as the real feed, it validates the entire display, market open or not.\n\n## Connection robustness\n\nConnection to TWS / IB Gateway in read-only mode (readonly), reconnections handled cleanly, and a clean shutdown that stops the timer, disconnects IB and halts the asyncio loop — no more reconnection spirals or QTimer crashes."
+      }
+    },
+    {
       "id": "affichage",
       "titre": {
-        "fr": "Affichage",
-        "en": "Display"
+        "fr": "Visualisations",
+        "en": "Visualizations"
       },
       "accroche": {
         "fr": "Footprint, heatmap, trades et carnet superposés sur un même graphe (ES / NQ).",
         "en": "Footprint, heatmap, trades and order book superposed on a single chart (ES / NQ)."
       },
       "intro": {
-        "fr": "Un tableau de bord d'orderflow temps réel pour les futures ES et NQ d'Interactive Brokers : footprint, heatmap de liquidité, trades et carnet d'ordres superposés sur un même graphe, façon Bookmap et Quantower. Construit en Python (PyQt5, pyqtgraph, ib_insync), avec une source de données unique derrière laquelle on permute le flux réel d'IBKR et un mode démo synthétique. Parcourez les couches une à une, puis la contrainte de données propre à IBKR.",
-        "en": "A real-time order-flow dashboard for the ES and NQ futures on Interactive Brokers: footprint, liquidity heatmap, trades and order book superposed on a single chart, Bookmap- and Quantower-style. Built in Python (PyQt5, pyqtgraph, ib_insync), with a single data source behind which the real IBKR feed and a synthetic demo mode are interchangeable. Walk through the layers one by one, then the data constraint specific to IBKR."
+        "fr": "Un tableau de bord d'orderflow temps réel pour les futures ES et NQ d'Interactive Brokers : footprint, heatmap de liquidité, trades et carnet d'ordres superposés sur un même graphe, façon Bookmap et Quantower. Construit en Python (PyQt5, pyqtgraph, ib_insync), avec une source de données unique derrière laquelle on permute le flux réel d'IBKR et un mode démo synthétique. Parcourez les couches une à une — le flux qui les alimente est documenté au pilier Temps réel.",
+        "en": "A real-time order-flow dashboard for the ES and NQ futures on Interactive Brokers: footprint, liquidity heatmap, trades and order book superposed on a single chart, Bookmap- and Quantower-style. Built in Python (PyQt5, pyqtgraph, ib_insync), with a single data source behind which the real IBKR feed and a synthetic demo mode are interchangeable. Walk through the layers one by one — the feed behind them is documented in the Real time pillar."
       },
       "statut": {
         "fr": "4 couches",
