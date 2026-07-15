@@ -73,13 +73,38 @@
         "fr": "Les huit stratégies BTC rejouées telles quelles sur les futures NQ.",
         "en": "The eight BTC strategies replayed as-is on the NQ futures."
       },
+      "intro": {
+        "fr": "Les huit mêmes stratégies que côté crypto, rejouées ici sur les futures NQ. Elles montent une marche à la fois : Buy & Hold pose le plancher que les sept autres doivent battre ; suivre la tendance (SMA 50/200, MACD) et parier contre elle (RSI, bandes de Bollinger) sont les deux familles classiques qui s'opposent ; puis viennent les garde-fous (RSI + stops), leur mise en commun (filtre de régime, taille au risque, stop suiveur), et la seule nourrie à l'order-flow — le volume profile par session. Changer d'actif sans changer les règles, c'est le test : ce qui tient sur BTC et sur NQ tient sans doute pour une raison, pas par chance.",
+        "en": "The same eight strategies as on the crypto side, replayed here on the NQ futures. They climb one step at a time: Buy & Hold sets the floor the other seven have to beat; following the trend (SMA 50/200, MACD) and betting against it (RSI, Bollinger Bands) are the two classic families that oppose each other; then come the guardrails (RSI + stops), their pooling (regime filter, risk sizing, trailing stop), and the only one fed by order-flow — the volume profile per session. Changing the asset without changing the rules is the test: whatever holds on both BTC and NQ probably holds for a reason, not by luck."
+      },
       "statut": {
         "fr": "8 stratégies",
         "en": "8 strategies"
       },
+      "marques": [
+        {
+          "nom": "LEAN",
+          "monogramme": "LN",
+          "couleur": "#17A2A2",
+          "statut": {
+            "fr": "8 stratégies portées",
+            "en": "8 strategies ported"
+          }
+        },
+        {
+          "nom": "vectorbt PRO",
+          "monogramme": "VBT",
+          "couleur": "#6E56CF",
+          "ecarte": true,
+          "statut": {
+            "fr": "En attente",
+            "en": "Pending"
+          }
+        }
+      ],
       "texte": {
-        "fr": "## Le portage\n\nLes huit stratégies backtestées sur BTCUSDT (pilier backtesting du projet crypto) ont été rejouées telles quelles sur les futures NQ avec le moteur LEAN : mêmes règles, mêmes garde-fous de causalité, données de ticks extraites de Quantower.\n\n## Résultats\n\nHuit backtests sur huit menés à terme ; la stratégie volume profile ressort en tête (+2,9 %, drawdown 0,9 % sur la période testée). Les écarts avec BTC sont commentés dans le dépôt.\n\n## Un pilier autonome\n\nToute la chaîne de données vit dans ce dépôt : extraction des ticks, normalisation OHLCV, génération des features volume profile (sessions Asia/London/NY, POC/VAH/VAL) et modèle de frais par contrat. La régénération des features a été validée bit à bit contre la chaîne d'origine.",
-        "en": "## The port\n\nThe eight strategies backtested on BTCUSDT (the crypto project's backtesting pillar) were replayed as-is on the NQ futures with the LEAN engine: same rules, same causality safeguards, tick data extracted from Quantower.\n\n## Results\n\nEight backtests out of eight completed; the volume-profile strategy comes out on top (+2.9%, 0.9% drawdown over the tested period). The gaps versus BTC are discussed in the repository.\n\n## A self-contained pillar\n\nThe whole data chain lives in this repository: tick extraction, OHLCV normalization, volume-profile feature generation (Asia/London/NY sessions, POC/VAH/VAL) and the per-contract fee model. The feature regeneration was validated bit-for-bit against the original chain."
+        "fr": "## Le portage\n\nLes huit stratégies backtestées sur BTCUSDT (pilier backtesting du projet crypto) ont été rejouées telles quelles sur les futures NQ avec le moteur LEAN : mêmes règles, mêmes garde-fous de causalité, données de ticks extraites de Quantower.\n\n## Résultats\n\nHuit backtests sur huit menés à terme ; la stratégie volume profile ressort en tête (+2,9 %, drawdown 0,9 % sur la période testée). Les écarts avec BTC sont commentés dans le dépôt.\n\n## Le second moteur, pas encore ici\n\nvectorbt PRO sert de contre-champ à LEAN côté crypto — tout l'historique d'un coup, en tableaux, plutôt que barre par barre. Rien n'a encore tourné sur NQ : le portage attend que le moteur ait fait ses preuves sur BTC.\n\n## Un pilier autonome\n\nToute la chaîne de données vit dans ce dépôt : extraction des ticks, normalisation OHLCV, génération des features volume profile (sessions Asia/London/NY, POC/VAH/VAL) et modèle de frais par contrat. La régénération des features a été validée bit à bit contre la chaîne d'origine.",
+        "en": "## The port\n\nThe eight strategies backtested on BTCUSDT (the crypto project's backtesting pillar) were replayed as-is on the NQ futures with the LEAN engine: same rules, same causality safeguards, tick data extracted from Quantower.\n\n## Results\n\nEight backtests out of eight completed; the volume-profile strategy comes out on top (+2.9%, 0.9% drawdown over the tested period). The gaps versus BTC are discussed in the repository.\n\n## The second engine, not here yet\n\nvectorbt PRO acts as LEAN's counter-shot on the crypto side — the whole history in one shot, in arrays, rather than bar by bar. Nothing has run on NQ yet: the port is waiting for the engine to prove itself on BTC.\n\n## A self-contained pillar\n\nThe whole data chain lives in this repository: tick extraction, OHLCV normalization, volume-profile feature generation (Asia/London/NY sessions, POC/VAH/VAL) and the per-contract fee model. The feature regeneration was validated bit-for-bit against the original chain."
       }
     },
     {
