@@ -1,0 +1,62 @@
+{
+  "sections": [
+    {
+      "id": "moteur-lean",
+      "titre": {
+        "fr": "LEAN — le moteur événementiel",
+        "en": "LEAN — the event-driven engine"
+      },
+      "pastille": {
+        "nom": "LEAN",
+        "monogramme": "LN",
+        "couleur": "#17A2A2"
+      },
+      "accroche": {
+        "fr": "Les huit mêmes stratégies, le même moteur, un autre actif : ce qui change vient du marché, pas du code.",
+        "en": "The same eight strategies, the same engine, a different asset: what changes comes from the market, not the code."
+      },
+      "intro": {
+        "fr": "Les huit stratégies backtestées sur BTCUSDT, rejouées telles quelles sur les futures NQ avec le moteur LEAN. Mêmes règles, mêmes garde-fous de causalité ; seul l'instrument change — et c'est précisément ce qu'on veut mesurer.",
+        "en": "The eight strategies backtested on BTCUSDT, replayed as-is on the NQ futures with the LEAN engine. Same rules, same causality safeguards; only the instrument changes — and that's exactly what we want to measure."
+      },
+      "statut": {
+        "fr": "8 stratégies portées",
+        "en": "8 strategies ported"
+      },
+      "items": [],
+      "texte": {
+        "fr": "## Ce qui change, et ce qui ne change pas\n\nLes stratégies restent identiques au frère crypto — pas une ligne de logique réécrite. Tout ce qui diffère du monde crypto est isolé dans un seul module, `nq_instrument.py` : le lecteur du CSV canonique, le modèle de frais (commission fixe par contrat et par côté, et non un pourcentage taker), les propriétés du symbole (tick de 0,25 point valant 5 $, multiplicateur 20) et le levier. C'est la condition pour que la comparaison veuille dire quelque chose : si les règles bougeaient en même temps que l'actif, aucun écart ne serait interprétable.\n\n## Un pilier autonome\n\nToute la chaîne de données vit dans ce dépôt : extraction des ticks, normalisation OHLCV, génération des features volume profile (sessions Asia/London/NY, POC/VAH/VAL) et modèle de frais par contrat. La régénération des features a été vérifiée **identique bit à bit** au fichier produit par la chaîne d'origine — la consolidation n'a rien changé aux résultats.\n\nUne dette assumée : `sessions.py`, le découpage Asia/London/NY en heure de New York, est un **miroir** du fichier homonyme du projet crypto. Toute correction doit être reportée des deux côtés — la duplication est notée dans le dépôt plutôt que masquée.\n\n## Résultats — 8 backtests sur 8\n\nLa stratégie volume profile ressort en tête : **+2,9 %, drawdown 0,9 %**, en 6 ordres. Elle est la mieux portée des huit, et pour une raison lisible : le volume profile par session épouse nativement les heures du CME, là où sur BTC les sessions sont une convention plaquée sur un marché qui ne ferme jamais.\n\n## Lire les écarts avec BTC\n\nLes écarts sont plus instructifs que les rendements, et la fenêtre courte impose la prudence — 20 jours de bougies contre 6 mois côté BTC.\n\n- **Buy & Hold** : −21,4 % sur le compte alors que NQ n'a baissé que de 3,5 % en prix. Un contrat porte ~6× de levier : le plancher de référence n'est plus du tout le même objet qu'en crypto.\n- **SMA 50/200** : −13,3 %, mais le chiffre ne juge pas la stratégie — une SMA 200 réclame ~8 jours de préchauffage sur une fenêtre de 20. Elle ne trade que 5 jours. Trop court pour conclure.\n- **RSI + stop/take** : rendement **identique** au RSI nu. Les stops en pourcentage (8 / 10 %) ne se déclenchent jamais sur NQ — l'instrument est trop peu volatil pour les atteindre. Un garde-fou qui ne se déclenche jamais n'est pas un garde-fou : c'est un paramètre mort.\n- **MACD** : −21,9 %, le même sur-trading qu'en crypto (18 ordres). Le défaut est dans la stratégie, pas dans l'actif.\n\n## Reste à faire\n\nLe montage LEAN — conteneur, `config.json`, montage du CSV — n'est pas versionné ici. À documenter et scripter, à l'image du frère, quand les backtests NQ reprendront.",
+        "en": "## What changes, and what doesn't\n\nThe strategies stay identical to the crypto sibling — not one line of logic rewritten. Everything that differs from the crypto world is isolated in a single module, `nq_instrument.py`: the canonical CSV reader, the fee model (a fixed commission per contract and per side, not a taker percentage), the symbol properties (a 0.25-point tick worth $5, multiplier 20) and the leverage. That's the condition for the comparison to mean anything: if the rules moved along with the asset, no gap would be interpretable.\n\n## A self-contained pillar\n\nThe whole data chain lives in this repository: tick extraction, OHLCV normalization, volume-profile feature generation (Asia/London/NY sessions, POC/VAH/VAL) and the per-contract fee model. The feature regeneration was verified **identical bit for bit** to the file produced by the original chain — the consolidation changed nothing in the results.\n\nOne acknowledged debt: `sessions.py`, the Asia/London/NY split in New York time, is a **mirror** of the file of the same name in the crypto project. Any fix has to be carried over on both sides — the duplication is noted in the repository rather than hidden.\n\n## Results — 8 backtests out of 8\n\nThe volume-profile strategy comes out on top: **+2.9%, 0.9% drawdown**, in 6 orders. It's the best-ported of the eight, for a readable reason: the per-session volume profile natively matches CME hours, whereas on BTC the sessions are a convention laid over a market that never closes.\n\n## Reading the gaps versus BTC\n\nThe gaps teach more than the returns, and the short window calls for caution — 20 days of candles against 6 months on the BTC side.\n\n- **Buy & Hold**: −21.4% on the account while NQ only fell 3.5% in price. One contract carries ~6× leverage: the reference floor is no longer the same object at all as in crypto.\n- **SMA 50/200**: −13.3%, but the figure doesn't judge the strategy — an SMA 200 needs ~8 days of warmup over a 20-day window. It only trades for 5 days. Too short to conclude.\n- **RSI + stop/take**: return **identical** to the bare RSI. The percentage stops (8 / 10%) never trigger on NQ — the instrument is too quiet to reach them. A safeguard that never triggers isn't a safeguard: it's a dead parameter.\n- **MACD**: −21.9%, the same over-trading as in crypto (18 orders). The flaw is in the strategy, not in the asset.\n\n## Left to do\n\nThe LEAN setup — container, `config.json`, CSV mount — isn't versioned here. To be documented and scripted, following the sibling, when the NQ backtests resume."
+      }
+    },
+    {
+      "id": "moteur-vbt",
+      "titre": {
+        "fr": "vectorbt PRO — le moteur vectorisé",
+        "en": "vectorbt PRO — the vectorized engine"
+      },
+      "pastille": {
+        "nom": "vectorbt PRO",
+        "monogramme": "VBT",
+        "couleur": "#6E56CF"
+      },
+      "accroche": {
+        "fr": "Le contre-champ de LEAN. Rien n'a encore tourné sur NQ — et l'ordre des étapes est délibéré.",
+        "en": "LEAN's counterpoint. Nothing has run on NQ yet — and the order of the steps is deliberate."
+      },
+      "intro": {
+        "fr": "Là où LEAN rejoue le marché barre par barre, vectorbt calcule sur l'historique entier d'un coup, en tableaux. Sur NQ, il n'a pas encore tourné : le portage attend que le moteur ait fait ses preuves sur BTC.",
+        "en": "Where LEAN replays the market bar by bar, vectorbt computes over the whole history in one shot, in arrays. On NQ it hasn't run yet: the port is waiting for the engine to prove itself on BTC."
+      },
+      "statut": {
+        "fr": "En attente",
+        "en": "Pending"
+      },
+      "items": [],
+      "texte": {
+        "fr": "## Pourquoi un second moteur\n\nDeux moteurs, deux philosophies. LEAN est événementiel : il rejoue le marché barre par barre, chaque ordre passe par un cycle complet — signal, ordre, exécution, portefeuille — et la fidélité se paie en temps. vectorbt est vectorisé : il applique la stratégie à tout l'historique d'un coup, des ordres de grandeur plus vite sur un balayage de milliers de combinaisons, au prix d'hypothèses simplificatrices sur le fill, les frais et le capital disponible.\n\nL'intérêt n'est pas la vitesse : c'est le désaccord. Là où les deux moteurs divergent sur la même stratégie, l'écart n'est pas du bruit — c'est une hypothèse du moteur vectorisé qui vient de se voir.\n\n## Où ça en est\n\nRien n'a tourné sur NQ. Ce n'est pas un retard, c'est un ordre : le contre-champ n'a de valeur que si le premier champ est solide. Tant que la réconciliation LEAN / vectorbt n'est pas faite sur BTC — où l'historique est confronté et profond — la refaire sur NQ ne prouverait rien de plus.\n\n## Ce que le portage supposerait\n\nLes mêmes obstacles que sous LEAN, mais à traiter dans un moteur qui n'a pas de modèle d'instrument : la commission fixe par contrat au lieu d'un pourcentage, le multiplicateur et la valeur du tick, le levier. Autant d'hypothèses à écrire à la main — et donc autant d'endroits où les deux moteurs peuvent se mettre à diverger pour de mauvaises raisons.",
+        "en": "## Why a second engine\n\nTwo engines, two philosophies. LEAN is event-driven: it replays the market bar by bar, every order goes through a full cycle — signal, order, fill, portfolio — and fidelity is paid for in time. vectorbt is vectorized: it applies the strategy to the whole history at once, orders of magnitude faster on a sweep of thousands of combinations, at the price of simplifying assumptions about the fill, the fees and the available capital.\n\nThe point isn't speed: it's disagreement. Where the two engines diverge on the same strategy, the gap isn't noise — it's an assumption of the vectorized engine that has just shown itself.\n\n## Where it stands\n\nNothing has run on NQ. That's not a delay, it's an order: the counterpoint is only worth something if the first shot is solid. Until the LEAN / vectorbt reconciliation is done on BTC — where the history is confronted and deep — redoing it on NQ would prove nothing more.\n\n## What the port would involve\n\nThe same obstacles as under LEAN, but to be handled in an engine that has no instrument model: the fixed commission per contract instead of a percentage, the multiplier and the tick value, the leverage. That's a set of assumptions to write by hand — and therefore a set of places where the two engines can start diverging for the wrong reasons."
+      }
+    }
+  ]
+}

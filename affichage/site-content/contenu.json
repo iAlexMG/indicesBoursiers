@@ -1,6 +1,58 @@
 {
   "sections": [
     {
+      "id": "tr-ibkr",
+      "parent": "temps-reel",
+      "titre": {
+        "fr": "IBKR",
+        "en": "IBKR"
+      },
+      "pastille": "ibkr",
+      "accroche": {
+        "fr": "Des données plus pauvres qu'un exchange crypto, un marché qui ferme — et comment on compose avec.",
+        "en": "Thinner data than a crypto exchange, a market that closes — and how it's handled."
+      },
+      "intro": {
+        "fr": "L'accès qui alimente le tableau de bord Python, par TWS / IB Gateway. Reproduire un terminal d'orderflow sur IBKR impose deux réalités : des données plus pauvres que celles d'un exchange crypto, et un marché qui ferme. Le projet compose avec les deux.",
+        "en": "The access that feeds the Python dashboard, through TWS / IB Gateway. Reproducing an order-flow terminal on IBKR imposes two realities: thinner data than a crypto exchange's, and a market that closes. The project works with both."
+      },
+      "statut": {
+        "fr": "Branché — L2 sur abonnement, différé sinon",
+        "en": "Connected — L2 on subscription, delayed otherwise"
+      },
+      "items": [],
+      "texte": {
+        "fr": "## Pourquoi IBKR pour l'affichage\n\nParce que Python peut le lire directement. `ib_insync` parle à TWS / IB Gateway depuis le même processus que le tableau de bord — aucune plateforme tierce à tenir ouverte, aucune DLL à déployer. C'est le seul des deux accès qu'on branche en trois lignes.\n\n## La contrainte IBKR\n\nUn exchange crypto pousse en continu trades et carnet complets ; IBKR, non. Le côté agresseur n'est pas fourni — on l'infère (voir la vue Trades) — et le carnet L2, indispensable à la heatmap et au DOM, exige un abonnement CME en temps réel. En données différées (gratuites, ~15 min), le footprint et les trades se remplissent quand même, mais la heatmap et le DOM restent vides. La conséquence se lit directement dans l'interface : deux des quatre couches dépendent d'une ligne de facture.\n\n## Marché fermé = aucun tick\n\nLe CME ferme la fin de semaine : plus rien ne circule. Impossible, alors, de vérifier l'affichage en direct — un vrai problème quand on développe le soir ou le samedi. C'est une différence de nature avec la crypto, où le flux ne s'arrête jamais et où l'écran se teste à n'importe quelle heure.\n\n## Le mode démo\n\nD'où un générateur de données synthétiques : marche aléatoire du prix, trades acheteurs / vendeurs, carnet animé. Il préremplit l'historique au lancement pour que la fenêtre soit déjà pleine, sans connexion ni abonnement. Comme il écrit dans le même FlowStore que le flux réel, il valide tout l'affichage, marché ouvert ou non — c'est la réponse aux deux contraintes du dessus, pas un gadget de démonstration.\n\n## Robustesse de la connexion\n\nConnexion en lecture seule (`readonly`), reconnexions gérées proprement, et fermeture propre qui arrête le timer, déconnecte IB et stoppe la boucle asyncio — fini les spirales de reconnexion et les plantages de QTimer.",
+        "en": "## Why IBKR for the display\n\nBecause Python can read it directly. `ib_insync` talks to TWS / IB Gateway from the same process as the dashboard — no third-party platform to keep open, no DLL to deploy. It's the only one of the two accesses you wire up in three lines.\n\n## The IBKR constraint\n\nA crypto exchange continuously pushes full trades and book; IBKR does not. The aggressor side isn't provided — it's inferred (see the Trades view) — and the L2 book, essential to the heatmap and the DOM, requires a real-time CME subscription. On delayed data (free, ~15 min), the footprint and trades still fill in, but the heatmap and DOM stay empty. The consequence reads straight off the interface: two of the four layers depend on a line item on an invoice.\n\n## Market closed = no ticks\n\nThe CME closes on weekends: nothing flows. Checking the display live then becomes impossible — a real problem when you develop in the evening or on a Saturday. It's a difference in kind from crypto, where the feed never stops and the screen can be tested at any hour.\n\n## Demo mode\n\nHence a synthetic data generator: random walk of the price, buy / sell trades, an animated book. It pre-fills the history at launch so the window is already full, with no connection and no subscription. Since it writes into the same FlowStore as the real feed, it validates the entire display, market open or not — it's the answer to the two constraints above, not a demo gadget.\n\n## Connection robustness\n\nRead-only connection (`readonly`), reconnections handled cleanly, and a clean shutdown that stops the timer, disconnects IB and halts the asyncio loop — no more reconnection spirals or QTimer crashes."
+      }
+    },
+    {
+      "id": "tr-quantower",
+      "parent": "temps-reel",
+      "titre": {
+        "fr": "Quantower (Rithmic)",
+        "en": "Quantower (Rithmic)"
+      },
+      "pastille": "quantower",
+      "accroche": {
+        "fr": "Le même marché par l'autre porte : le flux sur lequel tournent les indicateurs C#.",
+        "en": "The same market through the other door: the feed the C# indicators run on."
+      },
+      "intro": {
+        "fr": "Le second accès au CME. Il ne sert pas le tableau de bord Python mais l'automatisation : c'est là que vivent les indicateurs C#, et c'est par là que partiront les ordres.",
+        "en": "The second access to the CME. It doesn't serve the Python dashboard but the automation: that's where the C# indicators live, and that's where the orders will go out."
+      },
+      "statut": {
+        "fr": "Branché — le flux des indicateurs C#",
+        "en": "Connected — the C# indicators' feed"
+      },
+      "items": [],
+      "texte": {
+        "fr": "## Un marché, deux accès\n\nC'est là toute la différence avec le frère crypto. En crypto, sept exchanges sont sept marchés distincts, avec sept carnets et sept vérités de prix — d'où le travail de l'hybride pour les recentraliser. Ici, il n'y a qu'un marché : le CME. Quantower et IBKR ne sont pas deux marchés à réconcilier, ce sont deux **portes** vers le même carnet. Le périmètre du hub ne compte donc pas des exchanges, il compte des accès.\n\n## Pourquoi deux, alors\n\nParce qu'ils ne servent pas la même chose. IBKR se lit depuis Python, donc il alimente l'écran. Quantower porte la connexion Rithmic — celle où partiront les ordres — et fait tourner du C# natif à côté du carnet. Chacun est branché là où il est le meilleur ; aucun ne rend l'autre inutile.\n\n## Ce qui tourne dessus\n\nLes indicateurs C# natifs de la Phase 3 : volume profile de session, EMA de delta, signaux par stratégie. Chacun est validé par un rapport de parité contre le pipeline Python de référence — c'est la seule façon de savoir qu'un indicateur qui tourne en direct calcule bien ce que le backtest a validé.\n\nC'est aussi ce flux qui alimente les extracteurs d'historique du pilier Historique, sur la même connexion déjà authentifiée.\n\n## La contrainte\n\nRien ne circule si Quantower est fermé : la connexion Rithmic n'existe que dans la plateforme. Là où une clé d'API se branche sur un serveur qui tourne tout seul, ici il faut qu'une application de bureau reste ouverte. C'est la contrainte structurante de tout ce côté du projet — l'extraction d'historique comme les phases d'automatisation à venir.",
+        "en": "## One market, two accesses\n\nThis is the whole difference from the crypto sibling. In crypto, seven exchanges are seven distinct markets, with seven books and seven truths about price — hence the hybrid's work to recentralize them. Here there is only one market: the CME. Quantower and IBKR aren't two markets to reconcile, they're two **doors** to the same book. The hub's scope therefore doesn't count exchanges, it counts accesses.\n\n## Why two, then\n\nBecause they don't serve the same purpose. IBKR can be read from Python, so it feeds the screen. Quantower carries the Rithmic connection — the one where orders will go out — and runs native C# next to the book. Each is wired where it's best; neither makes the other useless.\n\n## What runs on it\n\nThe native C# indicators of Phase 3: session volume profile, delta EMA, per-strategy signals. Each is validated by a parity report against the reference Python pipeline — that's the only way to know that an indicator running live computes what the backtest actually validated.\n\nThis feed also supplies the history extractors of the History pillar, over the same already-authenticated connection.\n\n## The constraint\n\nNothing flows if Quantower is closed: the Rithmic connection only exists inside the platform. Where an API key plugs into a server that runs on its own, here a desktop application has to stay open. That's the structuring constraint of this whole side of the project — history extraction as much as the automation phases to come."
+      }
+    },
+    {
       "id": "apercu",
       "titre": {
         "fr": "Vue d'ensemble",
@@ -45,6 +97,11 @@
       "texte": {
         "fr": "## L'idée\n\nReproduire, sur les futures d'Interactive Brokers, les graphiques d'un terminal d'orderflow professionnel — un mélange de Bookmap (liquidité et trades) et de Quantower (footprint) — mais dans une seule fenêtre Python. Chaque symbole, ES et NQ, a son graphe ; les quatre couches partagent exactement le même axe temps + prix, si bien que tout est aligné au tick près.\n\n## Les quatre couches\n\nLe footprint (chandeliers détaillés, volume par niveau de prix), la heatmap (intensité de la liquidité du carnet dans le temps), le scatter des trades (chaque transaction = un point) et l'échelle DOM (le carnet courant, à droite). On les affiche ou on les masque à la volée par de simples cases à cocher, et la résolution d'une bougie se règle de 1 s à 5 min.\n\n## Deux sources, une même vue\n\nDerrière l'affichage, une interface de données unique (FlowStore) : la vue ignore si les données viennent du flux réel d'IBKR ou d'un générateur synthétique. On bascule de l'un à l'autre sans toucher au rendu.\n\n## Pile technique\n\nPython, PyQt5 et pyqtgraph pour un rendu natif fluide (mise à jour par QTimer, sans bloquer la boucle d'événements). Connexion temps réel via ib_insync. Seul l'onglet visible est redessiné : le coût d'affichage reste constant quel que soit le nombre de symboles.",
         "en": "## The idea\n\nReproduce, on the Interactive Brokers futures, the charts of a professional order-flow terminal — a blend of Bookmap (liquidity and trades) and Quantower (footprint) — but inside a single Python window. Each symbol, ES and NQ, has its own chart; the four layers share exactly the same time + price axis, so everything is aligned to the tick.\n\n## The four layers\n\nThe footprint (detailed candles, volume per price level), the heatmap (intensity of order-book liquidity over time), the trade scatter (each transaction = one point) and the DOM scale (the current book, on the right). They toggle on and off on the fly with simple checkboxes, and a candle's resolution adjusts from 1 s to 5 min.\n\n## Two sources, one view\n\nBehind the display sits a single data interface (FlowStore): the view doesn't know whether the data comes from the real IBKR feed or from a synthetic generator. You switch from one to the other without touching the rendering.\n\n## Tech stack\n\nPython, PyQt5 and pyqtgraph for smooth native rendering (refreshed by a QTimer, without blocking the event loop). Real-time connection via ib_insync. Only the visible tab is redrawn: the rendering cost stays constant whatever the number of symbols."
+      },
+      "vignette": "assets/indices/affichage/img/Capture_02.PNG",
+      "statut": {
+        "fr": "Les quatre couches",
+        "en": "The four layers"
       }
     },
     {
@@ -92,6 +149,11 @@
       "texte": {
         "fr": "## Ce que ça montre\n\nPour chaque bougie, des barres horizontales donnent le volume traité à chaque prix : vendeurs à gauche, acheteurs à droite, avec les chiffres bid × ask. L'en-tête de la bougie affiche le volume total (V) et le delta (D = acheteurs − vendeurs), qui dit d'un coup d'œil quel côté a dominé.\n\n## Les déséquilibres\n\nQuand le volume d'un côté écrase l'autre (ratio ≥ 3×), le niveau est mis en surbrillance : ce sont les endroits où une pression nette s'est exprimée — utiles pour repérer absorptions et accélérations.\n\n## Le footprint porte tout l'OHLC\n\nLes bougies sont reconstruites directement depuis les trades, pas depuis un canal de chandeliers : le footprint exige de toute façon le détail par prix (volume acheteur / vendeur à chaque niveau). L'ancien agrégateur OHLC est donc devenu redondant et a été retiré.\n\n## Anti-vibration au zoom\n\nLe regroupement des prix est figé par hystérésis : on conserve le pas courant tant que le nombre de lignes reste lisible, et on ne le recalcule qu'au franchissement d'un seuil — sans cela, le footprint « tremblerait » à chaque coup de molette.",
         "en": "## What it shows\n\nFor each candle, horizontal bars give the volume traded at every price: sellers on the left, buyers on the right, with the bid × ask figures. The candle header shows the total volume (V) and the delta (D = buyers − sellers), which tells at a glance which side dominated.\n\n## Imbalances\n\nWhen the volume on one side crushes the other (ratio ≥ 3×), the level is highlighted: these are the spots where net pressure showed up — handy for spotting absorption and acceleration.\n\n## The footprint carries all the OHLC\n\nCandles are rebuilt straight from the trades, not from a candle channel: the footprint needs the per-price detail anyway (buy / sell volume at each level). The old OHLC aggregator therefore became redundant and was removed.\n\n## Anti-jitter on zoom\n\nThe price grouping is frozen by hysteresis: the current step is kept as long as the number of rows stays readable, and recomputed only when a threshold is crossed — without this, the footprint would \"shimmer\" at every scroll of the wheel."
+      },
+      "vignette": "assets/indices/affichage/img/Footprint.PNG",
+      "statut": {
+        "fr": "Méthode",
+        "en": "Method"
       }
     },
     {
@@ -126,6 +188,11 @@
       "texte": {
         "fr": "## Ce que ça montre\n\nÀ intervalle régulier, on photographie le carnet d'ordres et on peint chaque niveau selon sa taille : plus c'est clair, plus la liquidité en attente est importante. En défilant, on voit naître les « murs » d'ordres, leur épaississement et leur retrait — exactement la lecture façon Bookmap.\n\n## Une grille de prix commune\n\nLa heatmap et l'échelle DOM partagent la même grille de prix : chaque rangée de la heatmap correspond à une barre du carnet. Le pas de la grille dérive du plus petit écart réel observé entre niveaux (le tick de l'instrument), pour une superposition cohérente.\n\n## Snapshots throttlés\n\nSans limite, on enregistrerait un instantané du carnet à chaque tick — mémoire et heatmap vite saturées. On n'en garde qu'un toutes les 250 ms : assez fin pour l'œil, assez sobre pour rester fluide.\n\n## Réservée au temps réel\n\nLa heatmap n'existe qu'avec le carnet L2 en temps réel (voir le pilier Temps réel).",
         "en": "## What it shows\n\nAt regular intervals, the order book is photographed and each level is painted by its size: the brighter it is, the larger the resting liquidity. Scrolling through, you watch the order \"walls\" appear, thicken and pull back — exactly the Bookmap-style read.\n\n## A shared price grid\n\nThe heatmap and the DOM scale share the same price grid: each heatmap row matches one book bar. The grid step derives from the smallest real gap observed between levels (the instrument's tick), for a coherent overlay.\n\n## Throttled snapshots\n\nWithout a limit, a book snapshot would be stored on every tick — memory and heatmap quickly saturated. Only one is kept every 250 ms: fine enough for the eye, light enough to stay smooth.\n\n## Real-time only\n\nThe heatmap only exists with the real-time L2 book (see the Real time pillar)."
+      },
+      "vignette": "assets/indices/affichage/img/Heatmap.PNG",
+      "statut": {
+        "fr": "Méthode",
+        "en": "Method"
       }
     },
     {
@@ -160,6 +227,11 @@
       "texte": {
         "fr": "## Ce que ça montre\n\nLe scatter dessine le fil des transactions : un point par trade, posé à son prix et à son instant. La couleur donne le côté agresseur, la taille donne le volume. On y lit d'un coup d'œil le rythme du marché et les rafales d'achats ou de ventes.\n\n## Lignes best bid / best ask\n\nDeux lignes suivent le meilleur achat (vert) et la meilleure vente (rouge) dans le temps. Quand un snapshot manque un côté, on prolonge par la dernière valeur connue (forward-fill) pour des lignes continues, sans trous.\n\n## Le côté agresseur est inféré\n\nIBKR donne le dernier prix et la taille, mais pas le côté du trade. On l'infère par la règle du tick : prix ≥ ask → achat, prix ≤ bid → vente, sinon on compare au dernier prix. Suffisant pour la lecture visuelle ; pour une précision parfaite par trade, on passerait à reqTickByTickData (piste ouverte).",
         "en": "## What it shows\n\nThe scatter draws the thread of transactions: one dot per trade, placed at its price and its time. Color gives the aggressor side, size gives the volume. You read the market's rhythm and the bursts of buying or selling at a glance.\n\n## Best bid / best ask lines\n\nTwo lines track the best bid (green) and the best ask (red) over time. When a snapshot misses one side, it's extended with the last known value (forward-fill) for continuous lines, with no gaps.\n\n## The aggressor side is inferred\n\nIBKR gives the last price and size, but not the side of the trade. It's inferred by the tick rule: price ≥ ask → buy, price ≤ bid → sell, otherwise compared to the previous price. Good enough for the visual read; for perfect per-trade accuracy, one would move to reqTickByTickData (an open avenue)."
+      },
+      "vignette": "assets/indices/affichage/img/Trades.PNG",
+      "statut": {
+        "fr": "Méthode",
+        "en": "Method"
       }
     },
     {
@@ -194,6 +266,11 @@
       "texte": {
         "fr": "## Ce que ça montre\n\nLe DOM (Depth of Market) empile, niveau par niveau, les ordres en attente à l'achat (vert) et à la vente (rouge). Comme il partage l'axe des prix du graphe principal, on voit instantanément à quels prix se concentre la liquidité par rapport au dernier échange.\n\n## Lié au graphe principal\n\nLe panneau est étroit et collé à droite, mais son axe vertical est synchronisé (setYLink) avec le graphe : zoomer les prix d'un côté déplace l'autre à l'identique, et le carnet reste toujours en face des bons niveaux.\n\n## Réservé au temps réel\n\nComme la heatmap, le DOM repose sur le carnet L2 et n'apparaît qu'en données temps réel.",
         "en": "## What it shows\n\nThe DOM (Depth of Market) stacks, level by level, the resting orders on the bid (green) and on the ask (red). Since it shares the price axis of the main chart, you instantly see at which prices liquidity concentrates relative to the last trade.\n\n## Linked to the main chart\n\nThe panel is narrow and pinned to the right, but its vertical axis is synchronized (setYLink) with the chart: zooming prices on one side moves the other identically, and the book always stays opposite the right levels.\n\n## Real-time only\n\nLike the heatmap, the DOM relies on the L2 book and only appears with real-time data."
+      },
+      "vignette": "assets/indices/affichage/img/Orderbook.PNG",
+      "statut": {
+        "fr": "Méthode",
+        "en": "Method"
       }
     }
   ]

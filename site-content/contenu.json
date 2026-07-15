@@ -2,48 +2,58 @@
   "sections": [
     {
       "id": "historique",
+      "etage": 1,
       "titre": {
         "fr": "Historique",
         "en": "History"
       },
       "accroche": {
-        "fr": "Les ticks NQ extraits depuis Quantower, au schéma exact du pilier crypto.",
-        "en": "NQ ticks extracted from inside Quantower, in the exact schema of the crypto pillar."
+        "fr": "Une seule source pour l'instant — et deux extracteurs qui se complètent sans se contrôler.",
+        "en": "A single source for now — and two extractors that complement each other without checking each other."
       },
       "intro": {
-        "fr": "Le point de départ de la chaîne : extraire les transactions tick-par-tick des futures NQ pour alimenter la même chaîne Python que le projet crypto.",
-        "en": "The starting point of the chain: extracting tick-by-tick trades of the NQ futures to feed the same Python chain as the crypto project."
+        "fr": "Le point de départ de la chaîne : extraire les transactions tick-par-tick des futures NQ pour alimenter la même chaîne Python que le projet crypto. L'enjeu est le même qu'en crypto — un backtest ne vaut que ce que vaut son historique — mais le moyen de le garantir manque encore.",
+        "en": "The starting point of the chain: extracting tick-by-tick trades of the NQ futures to feed the same Python chain as the crypto project. The stakes are the same as in crypto — a backtest is only worth what its history is worth — but the means of guaranteeing it is still missing."
+      },
+      "statut": {
+        "fr": "1 source sur 2",
+        "en": "1 source out of 2"
       },
       "texte": {
-        "fr": "## Le problème\n\nRithmic ne fournit pas d'API publique hors Quantower : impossible d'extraire les ticks NQ par un simple script. L'accès passe donc par une stratégie C# qui tourne dans Quantower et lit la connexion déjà authentifiée.\n\n## Ce qui est livré\n\nUne stratégie Quantower (NQ Tick Extractor) qui télécharge les ticks (prix, taille, côté agresseur) et les écrit en SQLite au schéma exact du projet crypto — toute la chaîne Python en aval (chandelles, volume profile) tourne sans modification.\n\nCollecte incrémentale et idempotente : les jours complets sont marqués et jamais re-téléchargés, le jour courant est purgé puis ré-inséré, et un mode démon recollecte automatiquement toutes les N heures tant que Quantower est ouvert.\n\n## Mesuré\n\nEnviron 412 000 ticks par jour sur NQ, à peu près deux semaines de profondeur d'historique disponible, et le côté agresseur présent sur la quasi-totalité des ticks.",
-        "en": "## The problem\n\nRithmic offers no public API outside Quantower: extracting NQ ticks with a plain script is impossible. Access therefore goes through a C# strategy that runs inside Quantower and reads the already-authenticated connection.\n\n## What is delivered\n\nA Quantower strategy (NQ Tick Extractor) that downloads the ticks (price, size, aggressor side) and writes them to SQLite in the exact schema of the crypto project — the whole downstream Python chain (candles, volume profile) runs unmodified.\n\nIncremental and idempotent collection: complete days are marked and never re-downloaded, the current day is purged then re-inserted, and a daemon mode automatically re-collects every N hours while Quantower is open.\n\n## Measured\n\nAbout 412,000 ticks per day on NQ, roughly two weeks of available history depth, and the aggressor side present on nearly every tick."
-      }
+        "fr": "## La méthode du frère\n\nCôté crypto, aucun historique n'est cru sur parole : chaque exchange est extrait par deux routes indépendantes, puis les deux sont confrontées minute par minute. C'est cette concordance — r = 0,999 999 99 sur Binance, 100 % de chandelles identiques sur OKX — qui autorise la suite de la chaîne.\n\n## Ici, une seule porte\n\nRithmic n'expose rien hors de Quantower, et le mot de passe stocké n'est pas déchiffrable hors process : l'accès passe par des stratégies C# qui tournent dans la plateforme. Deux extracteurs en sortent — les ticks pour le côté agresseur, les barres d'une minute pour la profondeur — et ils se complètent parfaitement. Mais ils lisent la même connexion, chez le même fournisseur : ils ne se contrôlent pas.\n\nLa contre-épreuve reste donc à faire. IBKR en est le candidat naturel, déjà branché ailleurs dans ce dépôt — et sa page dit exactement ce qui reste à mesurer.",
+        "en": "## The sibling's method\n\nOn the crypto side, no history is taken on trust: every exchange is extracted through two independent routes, then the two are confronted minute by minute. That agreement — r = 0.99999999 on Binance, 100% identical candles on OKX — is what licenses the rest of the chain.\n\n## Here, a single door\n\nRithmic exposes nothing outside Quantower, and the stored password can't be decrypted out of process: access goes through C# strategies that run inside the platform. Two extractors come out of it — ticks for the aggressor side, one-minute bars for the depth — and they complement each other perfectly. But they read the same connection, at the same provider: they don't check each other.\n\nThe counter-check therefore remains to be done. IBKR is its natural candidate, already wired in elsewhere in this repository — and its page states exactly what remains to be measured."
+      },
+      "sousHub": true,
+      "inclure": "historique"
     },
     {
       "id": "temps-reel",
+      "etage": 1,
       "titre": {
         "fr": "Temps réel",
         "en": "Real time"
       },
       "accroche": {
-        "fr": "Des données plus pauvres qu'un exchange crypto, un marché qui ferme — et comment on compose avec.",
-        "en": "Thinner data than a crypto exchange, a market that closes — and how it's handled."
+        "fr": "Un seul marché, deux portes : IBKR pour l'écran, Quantower pour les ordres.",
+        "en": "One market, two doors: IBKR for the screen, Quantower for the orders."
       },
       "intro": {
-        "fr": "Reproduire un terminal d'orderflow sur IBKR impose deux réalités : des données plus pauvres que celles d'un exchange crypto, et un marché qui ferme. Le projet compose avec les deux.",
-        "en": "Reproducing an order-flow terminal on IBKR imposes two realities: thinner data than a crypto exchange's, and a market that closes. The project works with both."
+        "fr": "Entre l'historique et l'écran, il y a la donnée vivante. Le CME est un marché unique — un seul carnet, une seule vérité des prix — atteint ici par deux accès qui ne servent pas la même chose.",
+        "en": "Between history and the screen sits the live data. The CME is a single market — one book, one truth about prices — reached here through two accesses that don't serve the same purpose."
       },
       "statut": {
-        "fr": "IBKR — temps réel, différé, démo",
-        "en": "IBKR — real time, delayed, demo"
+        "fr": "2 accès à un même marché",
+        "en": "2 accesses to a single market"
       },
       "texte": {
-        "fr": "## La contrainte IBKR\n\nUn exchange crypto pousse en continu trades et carnet complets ; IBKR, non. Le côté agresseur n'est pas fourni (on l'infère), et le carnet L2 — indispensable à la heatmap et au DOM — exige un abonnement CME en temps réel. En données différées (gratuites, ~15 min), le footprint et les trades se remplissent quand même, mais la heatmap et le DOM restent vides.\n\n## Marché fermé = aucun tick\n\nLe CME ferme le week-end : plus rien ne circule. Impossible, alors, de vérifier l'affichage en direct — un vrai problème quand on développe le soir ou la fin de semaine.\n\n## Le mode démo\n\nD'où un générateur de données synthétiques : marche aléatoire du prix, trades acheteurs / vendeurs, carnet animé. Il préremplit l'historique au lancement pour que la fenêtre soit déjà pleine, sans connexion ni abonnement. Comme il écrit dans le même FlowStore que le flux réel, il valide tout l'affichage, marché ouvert ou non.\n\n## Robustesse de la connexion\n\nConnexion à TWS / IB Gateway en lecture seule (readonly), reconnexions gérées proprement, et fermeture propre qui arrête le timer, déconnecte IB et stoppe la boucle asyncio — fini les spirales de reconnexion et les crashs de QTimer.",
-        "en": "## The IBKR constraint\n\nA crypto exchange continuously pushes full trades and book; IBKR does not. The aggressor side isn't provided (it's inferred), and the L2 book — essential to the heatmap and the DOM — requires a real-time CME subscription. On delayed data (free, ~15 min), the footprint and trades still fill in, but the heatmap and DOM stay empty.\n\n## Market closed = no ticks\n\nThe CME closes on weekends: nothing flows. Checking the display live then becomes impossible — a real problem when you develop in the evening or on the weekend.\n\n## Demo mode\n\nHence a synthetic data generator: random walk of the price, buy / sell trades, an animated book. It pre-fills the history at launch so the window is already full, with no connection and no subscription. Since it writes into the same FlowStore as the real feed, it validates the entire display, market open or not.\n\n## Connection robustness\n\nConnection to TWS / IB Gateway in read-only mode (readonly), reconnections handled cleanly, and a clean shutdown that stops the timer, disconnects IB and halts the asyncio loop — no more reconnection spirals or QTimer crashes."
-      }
+        "fr": "## Ce que la structure du marché change\n\nLe pilier temps réel du projet crypto passe son temps à réconcilier : six exchanges, six dialectes WebSocket, tout ramené au même schéma avant le premier pixel. Rien de tout cela ici. Un future sur indice naît sur un marché central : le carnet du CME est le carnet, il n'y a pas de consensus à reconstruire.\n\nLe travail se déplace donc ailleurs — non pas vers ce que les flux ont de différent, mais vers ce que chaque accès veut bien donner. Et sur ce terrain, un courtier d'indices est nettement plus avare qu'un exchange crypto.",
+        "en": "## What the market's structure changes\n\nThe crypto project's real-time pillar spends its time reconciling: six exchanges, six WebSocket dialects, everything brought back to the same schema before the first pixel. None of that here. An index future is born on a central market: the CME's book is the book, there's no consensus to rebuild.\n\nThe work therefore moves elsewhere — not toward what the feeds have that differs, but toward what each access is willing to give. And on that ground, an index broker is markedly stingier than a crypto exchange."
+      },
+      "sousHub": true
     },
     {
       "id": "affichage",
+      "etage": 2,
       "titre": {
         "fr": "Visualisations",
         "en": "Visualizations"
@@ -65,6 +75,7 @@
     },
     {
       "id": "backtesting",
+      "etage": 3,
       "titre": {
         "fr": "Backtesting",
         "en": "Backtesting"
@@ -78,37 +89,19 @@
         "en": "The same eight strategies as on the crypto side, replayed here on the NQ futures. They climb one step at a time: Buy & Hold sets the floor the other seven have to beat; following the trend (SMA 50/200, MACD) and betting against it (RSI, Bollinger Bands) are the two classic families that oppose each other; then come the guardrails (RSI + stops), their pooling (regime filter, risk sizing, trailing stop), and the only one fed by order-flow — the volume profile per session. Changing the asset without changing the rules is the test: whatever holds on both BTC and NQ probably holds for a reason, not by luck."
       },
       "statut": {
-        "fr": "8 stratégies",
-        "en": "8 strategies"
+        "fr": "2 moteurs — 8 stratégies",
+        "en": "2 engines — 8 strategies"
       },
-      "marques": [
-        {
-          "nom": "LEAN",
-          "monogramme": "LN",
-          "couleur": "#17A2A2",
-          "statut": {
-            "fr": "8 stratégies portées",
-            "en": "8 strategies ported"
-          }
-        },
-        {
-          "nom": "vectorbt PRO",
-          "monogramme": "VBT",
-          "couleur": "#6E56CF",
-          "ecarte": true,
-          "statut": {
-            "fr": "En attente",
-            "en": "Pending"
-          }
-        }
-      ],
       "texte": {
-        "fr": "## Le portage\n\nLes huit stratégies backtestées sur BTCUSDT (pilier backtesting du projet crypto) ont été rejouées telles quelles sur les futures NQ avec le moteur LEAN : mêmes règles, mêmes garde-fous de causalité, données de ticks extraites de Quantower.\n\n## Résultats\n\nHuit backtests sur huit menés à terme ; la stratégie volume profile ressort en tête (+2,9 %, drawdown 0,9 % sur la période testée). Les écarts avec BTC sont commentés dans le dépôt.\n\n## Le second moteur, pas encore ici\n\nvectorbt PRO sert de contre-champ à LEAN côté crypto — tout l'historique d'un coup, en tableaux, plutôt que barre par barre. Rien n'a encore tourné sur NQ : le portage attend que le moteur ait fait ses preuves sur BTC.\n\n## Un pilier autonome\n\nToute la chaîne de données vit dans ce dépôt : extraction des ticks, normalisation OHLCV, génération des features volume profile (sessions Asia/London/NY, POC/VAH/VAL) et modèle de frais par contrat. La régénération des features a été validée bit à bit contre la chaîne d'origine.",
-        "en": "## The port\n\nThe eight strategies backtested on BTCUSDT (the crypto project's backtesting pillar) were replayed as-is on the NQ futures with the LEAN engine: same rules, same causality safeguards, tick data extracted from Quantower.\n\n## Results\n\nEight backtests out of eight completed; the volume-profile strategy comes out on top (+2.9%, 0.9% drawdown over the tested period). The gaps versus BTC are discussed in the repository.\n\n## The second engine, not here yet\n\nvectorbt PRO acts as LEAN's counter-shot on the crypto side — the whole history in one shot, in arrays, rather than bar by bar. Nothing has run on NQ yet: the port is waiting for the engine to prove itself on BTC.\n\n## A self-contained pillar\n\nThe whole data chain lives in this repository: tick extraction, OHLCV normalization, volume-profile feature generation (Asia/London/NY sessions, POC/VAH/VAL) and the per-contract fee model. The feature regeneration was validated bit-for-bit against the original chain."
-      }
+        "fr": "## Deux moteurs, un seul portage fait\n\nLe frère crypto juge chaque stratégie deux fois, avec deux moteurs qui ne calculent pas de la même façon : LEAN rejoue le marché barre par barre, vectorbt l'avale d'un coup en tableaux. Sur NQ, seul LEAN a tourné — les huit stratégies, portées et menées à terme. Le second moteur attend son tour, et pour une raison qui se dit.",
+        "en": "## Two engines, one port done\n\nThe crypto sibling judges each strategy twice, with two engines that don't compute the same way: LEAN replays the market bar by bar, vectorbt swallows it whole in arrays. On NQ, only LEAN has run — the eight strategies, ported and carried through. The second engine is waiting its turn, and for a reason that can be stated."
+      },
+      "sousHub": true,
+      "inclure": "backtesting"
     },
     {
       "id": "automatisation",
+      "etage": 4,
       "titre": {
         "fr": "Automatisation",
         "en": "Automation"
@@ -124,6 +117,36 @@
       "texte": {
         "fr": "## La démarche par phases\n\nPorter vers NQ, dans Quantower, la chaîne construite et backtestée sur BTC — en avançant par phases mesurées, chacune avec un critère de sortie vérifiable avant de passer à la suivante.\n\n## Fait\n\nPhase 0 — faisabilité mesurée : profondeur d'historique, fiabilité du côté agresseur, volumétrie.\n\nPhase 1 — l'extracteur de ticks (voir le pilier Historique).\n\nPhase 2 — les huit stratégies backtestées sur NQ (voir le pilier Backtesting).\n\nPhase 3 — indicateurs C# natifs Quantower (volume profile de session, EMA de delta, signaux par stratégie), chacun validé par un rapport de parité contre le pipeline Python de référence.\n\n## À venir\n\nPhase 4 — shadow mode : les signaux sont journalisés en direct, zéro ordre envoyé, puis comparés aux backtests.\n\nPhase 5 — ordres semi-automatisés supervisés, d'abord en simulation, avec garde-fous : taille limitée, arrêt d'urgence, journal d'exécution.",
         "en": "## The phased approach\n\nPorting to NQ, inside Quantower, the chain built and backtested on BTC — moving through measured phases, each with a verifiable exit criterion before starting the next.\n\n## Done\n\nPhase 0 — measured feasibility: history depth, aggressor-side reliability, tick volume.\n\nPhase 1 — the tick extractor (see the History pillar).\n\nPhase 2 — the eight strategies backtested on NQ (see the Backtesting pillar).\n\nPhase 3 — native C# Quantower indicators (session volume profile, delta EMA, per-strategy signals), each validated by a parity report against the reference Python pipeline.\n\n## Next\n\nPhase 4 — shadow mode: signals are logged live, zero orders sent, then compared to the backtests.\n\nPhase 5 — supervised semi-automated orders, in simulation first, with safeguards: capped size, emergency stop, execution journal."
+      }
+    }
+  ],
+  "sources": [
+    {
+      "id": "quantower",
+      "nom": "Quantower",
+      "monogramme": "QT",
+      "couleur": "#1C7ED6",
+      "statut": {
+        "fr": "Historique + exécution",
+        "en": "History + execution"
+      },
+      "role": {
+        "fr": "La porte Rithmic : la seule qui serve l'historique NQ (ticks avec agresseur à 100 %, ~412 000 par jour, 13 jours de profondeur mesurée ; barres d'une minute pour aller plus loin), et celle où partiront les ordres. Elle fait tourner les indicateurs C# validés par parité. Sa contrainte : rien ne circule si la plateforme est fermée.",
+        "en": "The Rithmic door: the only one serving NQ history (ticks with 100% aggressor, ~412,000 a day, 13 days of measured depth; one-minute bars to go further), and the one where orders will go out. It runs the C# indicators validated by parity. Its constraint: nothing flows if the platform is closed."
+      }
+    },
+    {
+      "id": "ibkr",
+      "nom": "IBKR",
+      "monogramme": "IB",
+      "couleur": "#D81222",
+      "statut": {
+        "fr": "Temps réel",
+        "en": "Real time"
+      },
+      "role": {
+        "fr": "La porte du tableau de bord : lue directement depuis Python (TWS / IB Gateway, ib_insync), donc celle qui alimente l'écran. Plus avare qu'un exchange crypto — côté agresseur inféré, carnet L2 sur abonnement CME — et muette quand le marché ferme, d'où le mode démo. Candidate désignée pour la contre-épreuve de l'historique, pas encore mesurée.",
+        "en": "The dashboard's door: read straight from Python (TWS / IB Gateway, ib_insync), so it's the one feeding the screen. Stingier than a crypto exchange — inferred aggressor side, L2 book on CME subscription — and silent when the market closes, hence the demo mode. The designated candidate for the history counter-check, not yet measured."
       }
     }
   ]
