@@ -1,4 +1,4 @@
-# Reprise — état au 2026-07-16 (fin de 3e session) : TOUT FONCTIONNE SUR FLUX RÉEL — NQ + ES par Quantower/Rithmic, IBKR en témoin dégradé avec bandeau « aucun abonnement » ; décision : PROJET 100 % QUANTOWER (abonnement CME REFUSÉ) ; restent les CAPTURES (utilisateur) et le COMMIT (rien n'est commité ni poussé)
+# Reprise — état au 2026-07-16 (fin de 3e session) : TOUT FONCTIONNE SUR FLUX RÉEL — NQ + ES par Quantower/Rithmic, IBKR en témoin dégradé avec bandeau « aucun abonnement » ; décision : PROJET 100 % QUANTOWER (abonnement CME REFUSÉ) ; **COMMIT + PUSH FAIT le 2026-07-16** (2 dépôts, voir la fin) ; restent les CAPTURES DÉMO à remplacer (utilisateur) et les textes IBKR
 
 > **Session du 2026-07-16 en une ligne** : la panne « IBKR n'affiche rien » = handler weakref
 > (piège 13) ; IBKR est bien en DIFFÉRÉ (retard MESURÉ 11,5 min, piège de la mesure circulaire) ;
@@ -752,7 +752,20 @@ local — voir l'historique de la session ; ~30 lignes. Indispensable hors séan
 
 ---
 
-## ÉTAT GIT — RIEN N'EST COMMITÉ (vérifié `git status` en fin de session 2026-07-16)
+## ÉTAT GIT — COMMITÉ ET POUSSÉ le 2026-07-16
+
+**FAIT** (point stable et officiel, à la demande de l'utilisateur) :
+- `indicesBoursiers` : `ecbed1d..829c8a8` sur `origin/main` (30 fichiers, +4111/−362).
+- `iAlexMG.ca` : `af78656..3fd2d80` sur `origin/main` (`data/projets/indices.json`
+  régénéré par `sync-site.py` ; dry-run « à jour » avant de figer).
+- Les deux arbres sont **propres et synchro avec `origin/main`**. `sync-site.py --dry-run`
+  rend « à jour » sur les 4 projets. Rien ne reste à committer côté code.
+- ⚠️ **Le mensonge du site N'EST PAS le commit — il reste les CAPTURES DÉMO** (voir §1,
+  « LES CAPTURES DU SITE SONT CELLES DU MODE DÉMO ») : le commit a figé les vrais textes,
+  pas de vraies images. `All.PNG`/`Dom-Heatmap.PNG` toujours 404, les autres toujours démo.
+  **À remplacer par de vraies captures Quantower — fournies par l'utilisateur.**
+
+Ce qu'a contenu le commit `829c8a8` (garde la trace du QUOI) :
 
 ```
  M affichage/config.py              ACCESS + SOURCE (remplace DEMO_MODE), QT_FEED_PORTS,
