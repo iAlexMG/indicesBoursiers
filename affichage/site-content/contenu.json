@@ -77,29 +77,16 @@
       },
       "items": [
         {
-          "id": "dom-isole",
+          "id": "dom-heatmap-vue",
           "type": "figure",
-          "url": "assets/indices/affichage/img/Orderbook.PNG",
+          "url": "assets/indices/affichage/img/Dom-Heatmap.PNG",
           "titre": {
-            "fr": "Échelle DOM",
-            "en": "DOM scale"
+            "fr": "DOM & Heatmap (NQ)",
+            "en": "DOM & Heatmap (NQ)"
           },
           "description": {
-            "fr": "Le carnet courant en barres horizontales : achats (vert) et ventes (rouge) empilés par niveau de prix.",
-            "en": "The current book as horizontal bars: bids (green) and asks (red) stacked by price level."
-          }
-        },
-        {
-          "id": "heatmap-isolee",
-          "type": "figure",
-          "url": "assets/indices/affichage/img/Heatmap.PNG",
-          "titre": {
-            "fr": "Heatmap seule",
-            "en": "Heatmap alone"
-          },
-          "description": {
-            "fr": "Intensité de la liquidité du carnet dans le temps : plus c'est clair, plus il y a d'ordres en attente à ce prix.",
-            "en": "Intensity of order-book liquidity over time: the brighter it is, the more resting orders at that price."
+            "fr": "La heatmap tient tout le graphe — la liquidité du carnet dans le temps ; le DOM est la colonne du bord droit, le même carnet L2 à l'instant de la capture. Par l'accès Quantower, les deux couches se remplissent sans abonnement.",
+            "en": "The heatmap fills the whole chart — order-book liquidity through time; the DOM is the column on the right edge, the same L2 book at the instant of the capture. Through the Quantower access, both layers fill with no subscription."
           }
         }
       ]
@@ -135,14 +122,14 @@
         {
           "id": "footprint-contexte",
           "type": "figure",
-          "url": "assets/indices/affichage/img/Capture_01.PNG",
+          "url": "assets/indices/affichage/img/Footprint-Trades.PNG",
           "titre": {
-            "fr": "Footprint et fil des prix",
-            "en": "Footprint with the price path"
+            "fr": "Trades et footprint superposés",
+            "en": "Trades and footprint stacked"
           },
           "description": {
-            "fr": "Le footprint en arrière-plan, le fil des trades par-dessus : la structure du volume sous le mouvement de prix.",
-            "en": "The footprint in the background, the trade path on top: the structure of volume beneath the price move."
+            "fr": "Le footprint en arrière-plan, le fil des trades par-dessus : l'agression qui fait bouger le prix, et la chandelle qui en garde la trace, volume et delta compris.",
+            "en": "The footprint in the background, the trade path on top: the aggression that moves the price, and the candle that records it, volume and delta included."
           }
         }
       ],
