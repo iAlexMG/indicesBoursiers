@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Suivre le runtime du Quantower installé : v1.145.x = net8.0, v1.146.14+ = net10.0
+         (même contrainte que historique/NqExtractor — les deux DLL vivent dans le même hôte). -->
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>NqFeed</AssemblyName>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+
+  <Target Name="CheckQuantowerBin" BeforeTargets="BeforeBuild">
+    <Error Condition="'$(QuantowerBin)' == '' Or !Exists('$(QuantowerBin)\TradingPlatform.BusinessLayer.dll')"
+           Text="QuantowerBin absent ou invalide. Compiler via deploy.ps1 (résout C:\Quantower\TradingPlatform\v* le plus récent)." />
+  </Target>
+
+  <ItemGroup>
+    <!-- Private=false : DLL fournie par Quantower au runtime, jamais copiée ni versionnée -->
+    <Reference Include="TradingPlatform.BusinessLayer">
+      <HintPath>$(QuantowerBin)\TradingPlatform.BusinessLayer.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

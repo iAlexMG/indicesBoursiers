@@ -1,4 +1,4 @@
-"""Vue combinée orderflow + orderbook + footprint (style projet Crypto), en PyQt5.
+"""Vue combinée orderflow + orderbook + footprint (style projet Crypto).
 
 Un seul graphe par symbole superpose, du fond vers l'avant :
   - HEATMAP de liquidité (snapshots de carnet binnés dans le temps, type Bookmap),
@@ -9,6 +9,10 @@ Un seul graphe par symbole superpose, du fond vers l'avant :
 
 Porté/adapté de Crypto `gui/orderflow_view.py` et `gui/footprint_view.py`, sans aucune
 dépendance au backend Crypto : la vue lit un `orderflow_data.FlowStore`.
+
+Tout passe par `pyqtgraph.Qt`, qui résout le binding lui-même : ce module ne connaît ni
+PySide6 ni PyQt5. C'est ce qui a rendu le passage à PySide6 (alignement sur le frère
+crypto) gratuit — aucun `pyqtSignal`, aucun import direct du binding à traduire.
 """
 from __future__ import annotations
 
@@ -39,7 +43,7 @@ _HEAT = pg.ColorMap(
     [(8, 12, 22, 255), (20, 60, 110, 255), (70, 150, 180, 255), (250, 240, 150, 255)],
 )
 
-MAX_ROWS = 46            # nb max de lignes de prix du footprint -> tick adaptatif
+MAX_ROWS = config.FOOTPRINT_MAX_ROWS   # lignes max du footprint -> tick adaptatif (cf. config)
 IMB_RATIO = 3.0          # imbalance : un côté >= 3x l'autre -> barre en surbrillance
 CENTER_GAP = 0.03        # demi-espace central (mèche)
 MIN_COL_PX = 70          # largeur écran mini d'une bougie pour afficher les chiffres
@@ -50,7 +54,18 @@ SAMPLE_HINT_S = 0.5      # pas de temps cible pour la grille heatmap
 RIGHT_MARGIN_FRAC = 0.04
 Y_EMA = 0.2              # lissage de l'axe Y auto
 Y_PAD = 0.15
-DOT_SCALE = 3.0          # facteur de taille des points (scatter)
+DOT_SCALE = 3.0          # pente de la taille des points selon √volume (forme de la courbe)
+DOT_MIN_PX = 3.0         # diamètre mini d'un point
+DOT_MAX_PX = 26.0        # diamètre maxi NOMINAL ; le réglage « Taille points » va jusqu'à 1,6×
+
+# --- Filtre des trades affichés (réglages du popup « Trades ») ---------------
+# Portés de crypto (gui/orderflow_view.py). Nécessaires ici aussi : à ~9 trades/s (mesuré
+# sur NQ), l'heure gardée en mémoire par le FlowStore fait ~32 000 points — bien au-delà de
+# ce que pyqtgraph dessine sans ramer. On n'affiche donc jamais tout.
+MAX_POINTS = 1200        # cible de points (filtre Auto) à la plage de RÉFÉRENCE
+MIN_POINTS = 60          # plancher de points sur très grande plage (épure)
+AUTO_DECAY = 0.7         # plus grand = se resserre plus vite quand la plage s'élargit
+HARD_CAP = 6000          # plafond DUR, même Auto désactivé -> le rendu reste fluide
 
 GRID_PEN = pg.mkPen(QColor(46, 54, 66), width=1, cosmetic=True)
 POC_PEN = pg.mkPen(QColor(232, 198, 92), width=1, cosmetic=True)
@@ -70,14 +85,27 @@ def _fmt(v: float) -> str:
 # --- Axes & ViewBox --------------------------------------------------------
 
 class TzDateAxis(pg.DateAxisItem):
-    """Axe temps au fuseau configuré ; graduations calculées depuis la plage."""
+    """Axe temps au fuseau configuré ; graduations calculées depuis la plage.
+
+    `min_step` (secondes) = la RÉSOLUTION du footprint : jamais de graduation plus fine
+    qu'une bougie. Sans elle, l'axe ne visait que « ~7 graduations » et pouvait poser une
+    grille de 30 s sous des bougies de 1 min — elle découpait les chandelles en leur milieu
+    et suggérait une précision que les données n'ont pas. Calé sur le frère crypto, où la
+    grille suit la résolution. Le `showGrid` de pyqtgraph dessine SUR ces graduations : les
+    régler ici règle aussi la grille.
+    """
+
+    min_step = 0.0
 
     def tickValues(self, minVal, maxVal, size):
         span = maxVal - minVal
         if span <= 0:
             return []
-        spacing = _TIME_STEPS[-1]
-        for s in _TIME_STEPS:
+        # `or [...]` : garde-fou si la résolution dépasse tous les pas connus — mieux vaut
+        # le pas le plus grossier qu'une liste vide (axe sans aucune graduation).
+        steps = [s for s in _TIME_STEPS if s >= self.min_step] or [_TIME_STEPS[-1]]
+        spacing = steps[-1]
+        for s in steps:
             if span / s <= 7:
                 spacing = s
                 break
@@ -126,10 +154,23 @@ class FlowViewBox(pg.ViewBox):
             c, h = (ymin + ymax) / 2, (ymax - ymin) / 2 * factor
             self.setYRange(c - h, c + h, padding=0)
             o.y_manual = True
-            ev.accept()
-        else:
+        elif o.follow:
+            # En LIVE, la vue est pilotée par `x_span` : `refresh` la recalcule ancrée au
+            # présent à chaque image. Changer la durée suffit.
             o.x_span = float(np.clip(o.x_span * factor, 10.0, 86400.0))
-            ev.accept()
+        else:
+            # En LIBRE, `refresh` LIT viewRange() et n'applique JAMAIS `x_span` : sans ce
+            # zoom explicite la molette est INERTE — et comme on `accept()` l'événement, le
+            # zoom par défaut de pyqtgraph ne prend pas le relais non plus. Résultat : plus
+            # moyen de dézoomer dès qu'un simple glissement avait quitté le live. Mesuré.
+            # On part de la plage AFFICHÉE, pas de `x_span` : un pan ou un zoom-boîte peut
+            # l'avoir désynchronisée, et zoomer depuis une durée fantôme ferait sauter la vue.
+            x0, x1 = self.viewRange()[0]
+            span = float(np.clip((x1 - x0) * factor, 10.0, 86400.0))
+            c = (x0 + x1) / 2.0
+            self.setXRange(c - span / 2.0, c + span / 2.0, padding=0)
+            o.x_span = span      # « ● Live » conservera la durée que l'œil voit
+        ev.accept()
 
 
 # --- Footprint (port de Crypto gui/footprint_view.py) ----------------------
@@ -297,7 +338,12 @@ class FootprintItem(pg.GraphicsObject):
 # --- Panneau combiné -------------------------------------------------------
 
 class FlowPanel(QtWidgets.QWidget):
-    """Vue complète d'un symbole : graphe orderflow/footprint + échelle DOM + options."""
+    """Vue complète d'un symbole : graphe orderflow/footprint + échelle DOM.
+
+    Ne porte AUCUN réglage : la barre de commandes vit dans `ui.py` (comme chez crypto,
+    où `gui/app.py` tient la barre et `gui/orderflow_view.py` ne fait que rendre). Ce
+    panneau n'expose que l'API que cette barre et `controls.py` pilotent.
+    """
 
     def __init__(self, symbol: str, store) -> None:
         super().__init__()
@@ -305,106 +351,247 @@ class FlowPanel(QtWidgets.QWidget):
         self.store = store
         self.follow = True
         self.x_span = float(config.LIVE_SPAN_SECONDS)
+        self.res_s = float(config.RESOLUTION_SECONDS)
         self.y_manual = False
         self._yr = None
         self._vis_price = None
         self._inst_tick = 0.0       # tick d'instrument STABLE (plus petit écart vu)
         self._foot_tick = 0.0       # tick de regroupement footprint (hystérésis)
+        # réglages du popup « Trades » (voir controls.py)
+        self.min_size = 0.0         # n'afficher que les trades de taille >= seuil
+        self.auto_filter = True     # limite la densité de points selon la plage affichée
+        self.dot_scale = 1.0        # multiplicateur de taille des points (1.0 = nominal)
+        self._auto_thresh = 0.0     # seuil de taille STABLE du filtre Auto (hystérésis)
 
         root = QtWidgets.QVBoxLayout(self)
         root.setContentsMargins(4, 4, 4, 4)
-        root.addLayout(self._build_options())
 
         row = QtWidgets.QHBoxLayout()
         root.addLayout(row, stretch=1)
 
         self.vb = FlowViewBox()
         self.vb.owner = self
+        # Référence gardée : `set_resolution` lui cale son pas minimal (voir TzDateAxis).
+        self._taxis = TzDateAxis(orientation="bottom")
         self.plot = pg.PlotWidget(
             viewBox=self.vb,
-            axisItems={"bottom": TzDateAxis(orientation="bottom"),
+            axisItems={"bottom": self._taxis,
                        "right": PriceAxis(orientation="right")},
         )
         self.plot.showAxis("right")
         self.plot.hideAxis("left")
         self.plot.setTitle(symbol, color="w", size="12pt")
         self.plot.showGrid(x=True, y=True, alpha=0.15)
+        # Tout glissement/pan à la souris fait QUITTER le live (le bouton « ● Live » de la
+        # barre reflète ensuite cet état). Sans ce branchement, `follow` ne repassait jamais
+        # à False : la vue restait collée au présent et « Aller au » n'aurait rien pu faire.
+        self.vb.sigRangeChangedManually.connect(self._on_manual_range)
 
         self.img = pg.ImageItem()
         self.img.setLookupTable(_HEAT.getLookupTable(0.0, 1.0, 256))
         self.img.setOpacity(config.HEAT_OPACITY)
-        self.img.setZValue(0)
         self.plot.addItem(self.img)
 
         self.bid_line = pg.PlotCurveItem(pen=pg.mkPen(BUY + (180,), width=1))
         self.ask_line = pg.PlotCurveItem(pen=pg.mkPen(SELL + (180,), width=1))
-        self.bid_line.setZValue(10); self.ask_line.setZValue(10)
         self.plot.addItem(self.bid_line); self.plot.addItem(self.ask_line)
 
         dot_pen = pg.mkPen(20, 20, 20, 90)
         self.buys = pg.ScatterPlotItem(pen=dot_pen, brush=pg.mkBrush(*BUY, 140), pxMode=True)
         self.sells = pg.ScatterPlotItem(pen=dot_pen, brush=pg.mkBrush(*SELL, 140), pxMode=True)
-        self.buys.setZValue(20); self.sells.setZValue(20)
         self.plot.addItem(self.sells); self.plot.addItem(self.buys)
 
         self.fp = FootprintItem()
-        self.fp.setZValue(30)
         self.plot.addItem(self.fp)
+
+        # COUCHES superposées, pilotées par « Affichage ⚙ » (controls.py). Le carnet (DOM)
+        # est un panneau latéral -> traité à part. Les lignes bid/ask sont le contexte de la
+        # heatmap : elles vivent et s'effacent avec elle, comme chez le frère.
+        self._layers = {
+            "footprint": (self.fp,),
+            "heatmap": (self.img, self.bid_line, self.ask_line),
+            "trades": (self.buys, self.sells),
+        }
+        self._layer_order = ["heatmap", "trades", "footprint"]   # arrière -> avant
+        self._apply_z_order()
         row.addWidget(self.plot, stretch=1)
+
+        # BANDEAU d'explication, posé SUR le graphe (voir `set_notice`). Un QLabel enfant
+        # plutôt qu'un TextItem : il ne doit ni bouger ni grossir avec le zoom, et surtout
+        # ne pas vivre dans le repère des données — ce qu'il dit, c'est justement que les
+        # données manquent. Placé en HAUT, pas au centre : le footprint doit rester lisible
+        # dessous (sur IBKR, les trades s'affichent bel et bien — seul le carnet manque).
+        self._notice = QtWidgets.QLabel("", self.plot)
+        self._notice.setAlignment(Qt.AlignCenter)
+        # Sans repli, `adjustSize` étale la phrase sur TOUTE la largeur du graphe : le
+        # bandeau devient une barre qui écrase la vue au lieu de l'annoter.
+        self._notice.setWordWrap(True)
+        self._notice.setStyleSheet(
+            "QLabel { color: #e6c07b; background: rgba(20,22,28,215);"
+            " border: 1px solid #4b4033; border-radius: 4px; padding: 5px 10px;"
+            " font-size: 11px; }")
+        self._notice.hide()
 
         # échelle DOM (carnet courant), Y-liée au graphe principal
         self.dom = pg.PlotWidget()
         self.dom.setMaximumWidth(150)
+        # ⚠️ TITRE VIDE OBLIGATOIRE — NE PAS « NETTOYER ».
+        # `setYLink` synchronise la PLAGE de prix, pas la GÉOMÉTRIE. Le graphe principal porte
+        # un titre (`setTitle(symbol)`) qui lui mange 30 px en haut ; sans titre, la zone de
+        # tracé du DOM commençait 30 px plus haut. Pire : pyqtgraph tente alors de compenser
+        # en décalant la plage du DOM, et se trompe de sens — **désalignement MESURÉ de 60 px
+        # (= 2 × 30), constant sur toute la hauteur**, avec des plages Y différentes (21,30
+        # contre 22,13 pts). Un titre vide de MÊME TAILLE rend les deux géométries identiques :
+        # la compensation devient un no-op et le carnet retombe en face des bons niveaux.
+        # Si le titre du graphe change de taille, celui-ci DOIT suivre.
+        self.dom.setTitle(" ", size="12pt")
         self.dom.setYLink(self.plot)
         self.dom.hideAxis("left")
         self.dom.showGrid(x=True, y=False, alpha=0.1)
         self.dom_bids = pg.BarGraphItem(x0=0, y=[], height=0, width=[], brush=pg.mkBrush(*BUY, 150))
         self.dom_asks = pg.BarGraphItem(x0=0, y=[], height=0, width=[], brush=pg.mkBrush(*SELL, 150))
         self.dom.addItem(self.dom_bids); self.dom.addItem(self.dom_asks)
+        # Le DOM est vide en entier quand le carnet manque : il porte donc sa propre étiquette
+        # (le panneau ne fait que 150 px — texte court obligatoire).
+        self._dom_notice = QtWidgets.QLabel("", self.dom)
+        self._dom_notice.setAlignment(Qt.AlignCenter)
+        self._dom_notice.setWordWrap(True)
+        self._dom_notice.setStyleSheet(
+            "QLabel { color: #8b949e; background: transparent; font-size: 10px; }")
+        self._dom_notice.hide()
         row.addWidget(self.dom)
 
-    # -- barre d'options ---------------------------------------------------
-    def _build_options(self):
-        bar = QtWidgets.QHBoxLayout()
-        self.cb_foot = QtWidgets.QCheckBox("Footprint"); self.cb_foot.setChecked(True)
-        self.cb_heat = QtWidgets.QCheckBox("Heatmap"); self.cb_heat.setChecked(True)
-        self.cb_trades = QtWidgets.QCheckBox("Trades"); self.cb_trades.setChecked(True)
-        self.cb_dom = QtWidgets.QCheckBox("Carnet"); self.cb_dom.setChecked(True)
-        for cb in (self.cb_foot, self.cb_heat, self.cb_trades, self.cb_dom):
-            cb.stateChanged.connect(self._apply_layers)
-            bar.addWidget(cb)
-        bar.addSpacing(16)
-        bar.addWidget(QtWidgets.QLabel("Résolution :"))
-        self.res_combo = QtWidgets.QComboBox()
-        self._res_values = [1, 5, 15, 30, 60, 300]
-        for s in self._res_values:
-            self.res_combo.addItem(f"{s}s" if s < 60 else f"{s // 60}m", s)
-        self.res_combo.setCurrentIndex(self._res_values.index(config.RESOLUTION_SECONDS)
-                                       if config.RESOLUTION_SECONDS in self._res_values else 1)
-        self.res_s = float(config.RESOLUTION_SECONDS)
-        self.res_combo.currentIndexChanged.connect(self._on_res)
-        bar.addWidget(self.res_combo)
-        btn_live = QtWidgets.QPushButton("⟳ Live")
-        btn_live.clicked.connect(self._go_live)
-        bar.addWidget(btn_live)
-        bar.addStretch(1)
-        return bar
+    def set_notice(self, text: str | None, dom_text: str | None = None) -> None:
+        """Affiche (ou retire) le bandeau d'explication posé sur les graphes.
 
-    def _apply_layers(self) -> None:
-        self.fp.setVisible(self.cb_foot.isChecked())
-        for it in (self.img, self.bid_line, self.ask_line):
-            it.setVisible(self.cb_heat.isChecked())
-        self.buys.setVisible(self.cb_trades.isChecked())
-        self.sells.setVisible(self.cb_trades.isChecked())
-        self.dom.setVisible(self.cb_dom.isChecked())
+        Décidé par `MainWindow`, qui est le seul à savoir POURQUOI une couche est vide :
+        la vue, elle, ne voit qu'un store. Un graphe muet sans explication est
+        indiscernable d'une panne — c'est précisément ce qui a fait perdre du temps.
+        """
+        for label, txt in ((self._notice, text), (self._dom_notice, dom_text)):
+            if txt:
+                label.setText(txt)
+                label.setVisible(True)
+            else:
+                label.setVisible(False)
+        self._place_notices()
 
-    def _on_res(self, idx: int) -> None:
-        self.res_s = float(self.res_combo.currentData())
+    def _place_notices(self) -> None:
+        if self._notice.isVisible():
+            r = self.plot.rect()
+            # Borné à la moitié de la largeur (et 560 px) : un bandeau qui traverse l'écran
+            # cesse d'être une annotation. `setFixedWidth` AVANT `adjustSize` pour que le
+            # repli calcule la hauteur sur la bonne largeur.
+            self._notice.setFixedWidth(max(220, min(560, r.width() // 2)))
+            self._notice.adjustSize()
+            self._notice.move(max(0, r.center().x() - self._notice.width() // 2), 34)
+        if self._dom_notice.isVisible():
+            r = self.dom.rect()
+            self._dom_notice.setFixedWidth(max(40, r.width() - 12))
+            self._dom_notice.adjustSize()
+            self._dom_notice.move(6, max(0, r.center().y() - self._dom_notice.height() // 2))
 
-    def _go_live(self) -> None:
+    def resizeEvent(self, ev) -> None:
+        super().resizeEvent(ev)
+        self._place_notices()
+
+    # -- modes : live (collé au présent) / libre (navigation dans l'historique) --
+    def _on_manual_range(self) -> None:
+        if self.follow:
+            self.follow = False
+
+    def go_live(self) -> None:
+        """Recolle au présent en CONSERVANT la durée affichée (15 min reste 15 min)."""
+        (x0, x1), _ = self.vb.viewRange()
+        span = x1 - x0
+        if span > 0:
+            self.x_span = float(np.clip(span, 10.0, 86400.0))
         self.follow = True
         self.y_manual = False
         self._yr = None
+
+    def goto(self, t_start: float) -> None:
+        """Saute à une date précise (epoch s), en mode libre.
+
+        N'a de sens que depuis la phase 4 : au-delà de l'heure gardée en mémoire, c'est
+        `BookReader` qui sert la heatmap depuis books.db. Le footprint, lui, reste borné à
+        la mémoire (`FlowStore.visible_trades` ne lit pas le disque) : sur une date
+        ancienne, la heatmap répond et les bougies non. C'est attendu, pas un bug.
+        """
+        self.follow = False
+        self.y_manual = False
+        self._yr = None
+        self.vb.setXRange(t_start, t_start + self.x_span, padding=0)
+
+    def set_resolution(self, res_s: float) -> None:
+        self.res_s = max(1.0, float(res_s))
+        # La grille suit la résolution : pas de graduation plus fine qu'une bougie.
+        self._taxis.min_step = self.res_s
+        self._taxis.picture = None      # force le recalcul des graduations à la prochaine image
+        self._taxis.update()
+
+    def set_symbol(self, symbol: str, store) -> None:
+        """Bascule le panneau sur un autre symbole / accès (boutons de la barre, menu Accès).
+
+        Remet à zéro tout ce qui est DÉDUIT du flux précédent : garder le tick de l'ES pour
+        dessiner le NQ donnerait une grille de prix fausse, et garder l'échelle Y ferait
+        sauter la vue. Le lissage `_yr` repart de la première mesure du nouveau flux.
+        """
+        self.symbol = symbol
+        self.store = store
+        self.plot.setTitle(symbol, color="w", size="12pt")
+        self._inst_tick = 0.0
+        self._foot_tick = 0.0
+        self._yr = None
+        self._vis_price = None
+        self._auto_thresh = 0.0
+
+    # -- API des couches (pilotée par controls.py / « Affichage ⚙ ») --------
+    def _apply_z_order(self) -> None:
+        """Assigne les Z selon l'ordre courant (bas -> haut = arrière -> avant)."""
+        for i, name in enumerate(self._layer_order):
+            for it in self._layers[name]:
+                it.setZValue((i + 1) * 10)
+
+    def set_layer_visible(self, name: str, on: bool) -> None:
+        for it in self._layers.get(name, ()):
+            it.setVisible(on)
+
+    def set_layer_opacity(self, name: str, value: float) -> None:
+        v = float(np.clip(value, 0.0, 1.0))
+        for it in self._layers.get(name, ()):
+            it.setOpacity(v)
+
+    def move_layer(self, name: str, to_front: bool) -> None:
+        order = self._layer_order
+        if name not in order:
+            return
+        i = order.index(name)
+        j = i + 1 if to_front else i - 1
+        if 0 <= j < len(order):
+            order[i], order[j] = order[j], order[i]
+            self._apply_z_order()
+
+    def set_dom_visible(self, on: bool) -> None:
+        self.dom.setVisible(on)
+
+    def set_footprint_option(self, name: str, on: bool) -> None:
+        """Donnée affichée du footprint (show_bars / show_numbers / show_header / show_poc).
+
+        `show_bars` et `show_poc` sont lus dans `_generate` (la QPicture) tandis que
+        `show_numbers` et `show_header` le sont dans `paint` : on REGÉNÈRE donc, sinon les
+        deux premiers ne changeraient rien à l'écran jusqu'au prochain trade.
+        """
+        if not hasattr(self.fp, name):
+            return
+        setattr(self.fp, name, bool(on))
+        self.fp.set_data(self.fp.candles, self.fp.tick)
+
+    def set_dot_scale(self, value: float) -> None:
+        self.dot_scale = max(0.1, float(value))
+
+    def set_min_size(self, value: float) -> None:
+        self.min_size = max(0.0, float(value))
 
     # -- helpers grille (commune heatmap/DOM) ------------------------------
     @staticmethod
@@ -476,15 +663,41 @@ class FlowPanel(QtWidgets.QWidget):
         return out
 
     def _auto_y(self, book):
-        bp, _, ap, _ = self._book_levels(book)
-        if bp.size == 0 or ap.size == 0:
-            return None
-        lo, hi = float(bp.min()), float(ap.max())
-        if hi <= lo:
-            return None
+        """Cadrage vertical. Le carnet est l'ancre PRÉFÉRÉE, jamais la seule.
+
+        ⚠️ Cette fonction exigeait un carnet et renonçait sans lui — or **un accès sans L2
+        (IBKR non abonné) n'en a JAMAIS**. L'axe restait donc figé sur le dernier cadrage
+        connu (celui de Quantower), et les trades d'IBKR se dessinaient hors écran : vue
+        vide, alors que les points existaient. Mesuré : axe à 29642-29660 pendant que les
+        trades tombaient à 29284-29291, **355 points plus bas**.
+        🪤 Un test qui compte `scatter.getData()` voit 23 points et conclut « ça marche » :
+        il mesure les données POSÉES sur l'objet, pas ce qui est VISIBLE. C'est comme ça
+        que la panne est passée. Vérifier le cadrage, pas seulement le contenu.
+        """
+        lo = hi = None
+        if book is not None:
+            bp, _, ap, _ = self._book_levels(book)
+            if bp.size and ap.size:
+                # Le pont sert ~100 niveaux PAR CÔTÉ pour donner de la profondeur à la
+                # heatmap ; l'AXE, lui, n'a aucune raison de tous les montrer. Les englober
+                # étirait la vue à ~50 points sur le NQ, et c'est CETTE étendue qui forçait
+                # le footprint à regrouper 10 ticks par ligne alors que le DOM en montre 1
+                # (mesuré). On ne garde qu'une bande de `config.VIEW_LEVELS` niveaux autour
+                # du marché. Niveaux servis MEILLEUR EN PREMIER (vérifié sur 49 snapshots).
+                n = max(1, int(config.VIEW_LEVELS))
+                lo, hi = float(bp[:n].min()), float(ap[:n].max())
+        # Les TRADES visibles élargissent le cadrage — et le portent à eux seuls quand il
+        # n'y a pas de carnet. Sans ça, en zoom arrière (ou sans L2), le prix sort de l'écran
+        # et l'historique paraît vide.
         if self._vis_price is not None:
-            lo = min(lo, self._vis_price[0])
-            hi = max(hi, self._vis_price[1])
+            lo = self._vis_price[0] if lo is None else min(lo, self._vis_price[0])
+            hi = self._vis_price[1] if hi is None else max(hi, self._vis_price[1])
+        if lo is None or hi is None:
+            return None
+        if hi <= lo:
+            # Tous les trades au même prix : sans marge, la plage serait dégénérée.
+            span = (self._inst_tick or 0.25) * 10
+            lo, hi = lo - span, hi + span
         pad = (hi - lo) * Y_PAD
         target = (lo - pad, hi + pad)
         if self._yr is None:
@@ -494,10 +707,30 @@ class FlowPanel(QtWidgets.QWidget):
                         self._yr[1] + (target[1] - self._yr[1]) * Y_EMA)
         return self._yr
 
+    def _clear(self) -> None:
+        """Vide TOUTES les couches.
+
+        Appelé dès que le store courant n'a rien à montrer. Sans ça, `refresh` sortait en
+        avance et laissait à l'écran les pixels du flux PRÉCÉDENT : basculer de Démo vers un
+        Quantower muet affichait les chiffres de la démo sous l'étiquette « Quantower ».
+        Mesuré : 1226 points fantômes, 25 bougies. Un tableau de bord dont l'argument est
+        « d'où vient la donnée » ne peut pas se permettre ça.
+        """
+        self.img.clear()
+        self.bid_line.clear()
+        self.ask_line.clear()
+        self.buys.setData(x=[], y=[], size=[])
+        self.sells.setData(x=[], y=[], size=[])
+        self.fp.set_data([], 0.0)
+        self.dom_bids.setOpts(x0=0, y=[], height=0, width=[])
+        self.dom_asks.setOpts(x0=0, y=[], height=0, width=[])
+        self._vis_price = None
+
     # -- rendu (appelé par le QTimer de la fenêtre) ------------------------
     def refresh(self) -> None:
         latest = self.store.t_last
         if not latest:
+            self._clear()
             return
         book = self.store.last_book()
 
@@ -507,7 +740,9 @@ class FlowPanel(QtWidgets.QWidget):
             t1 = max(latest, candle_end) + margin
             t0 = t1 - self.x_span
             self.vb.setXRange(t0, t1, padding=0)
-            if not self.y_manual and book is not None:
+            # PAS de `and book is not None` : `_auto_y` sait se rabattre sur les trades, et
+            # c'est le seul cadrage possible pour un accès sans carnet (voir sa docstring).
+            if not self.y_manual:
                 yr = self._auto_y(book)
                 if yr:
                     self.vb.setYRange(*yr, padding=0)
@@ -567,10 +802,43 @@ class FlowPanel(QtWidgets.QWidget):
         price = np.fromiter((t.price for t in trades), np.float64, n)
         size = np.fromiter((t.size for t in trades), np.float64, n)
         is_buy = np.fromiter((t.side == "buy" for t in trades), bool, n)
+        # L'étendue Y couvre TOUS les trades de la fenêtre, filtrés ou non : ce que l'on
+        # cache pour désencombrer le rendu ne doit pas sortir la vue de son cadrage.
         self._vis_price = (float(price.min()), float(price.max()))
-        dot = np.clip(2.0 + np.sqrt(size) * DOT_SCALE, 3.0, 26.0)
-        self.buys.setData(x=ts[is_buy], y=price[is_buy], size=dot[is_buy])
-        self.sells.setData(x=ts[~is_buy], y=price[~is_buy], size=dot[~is_buy])
+
+        idx = self._filter_trades(size, t0, t1)
+        # ORDRE DE DESSIN STABLE : tri par volume CROISSANT -> les gros points passent en
+        # dernier (donc au-dessus), et l'empilement ne permute plus d'une image à l'autre.
+        idx = idx[np.argsort(size[idx], kind="stable")]
+        dot = np.clip(2.0 + np.sqrt(size[idx]) * DOT_SCALE, DOT_MIN_PX, DOT_MAX_PX)
+        dot *= self.dot_scale
+        np.minimum(dot, DOT_MAX_PX * 1.6, out=dot)   # même garde-fou que le frère
+        b = is_buy[idx]
+        self.buys.setData(x=ts[idx][b], y=price[idx][b], size=dot[b])
+        self.sells.setData(x=ts[idx][~b], y=price[idx][~b], size=dot[~b])
+
+    def _filter_trades(self, size: np.ndarray, t0: float, t1: float) -> np.ndarray:
+        """Indices des trades à DESSINER (le store en garde bien plus qu'on n'en affiche).
+
+        Deux filtres, tous deux vectorisés : le seuil manuel `min_size`, puis le filtre
+        `auto_filter` dont la cible DÉCROÎT quand la plage s'élargit (dézoomer ne doit pas
+        noyer l'écran de points). Le seuil auto est STABLE par hystérésis : un top-N
+        recalculé à chaque image ferait clignoter les points en bord de sélection.
+        """
+        idx = np.nonzero(size >= self.min_size)[0]
+        if self.auto_filter:
+            span = max(t1 - t0, 1.0)
+            cap = int(np.clip(MAX_POINTS * (config.LIVE_SPAN_SECONDS / span) ** AUTO_DECAY,
+                              MIN_POINTS, MAX_POINTS))
+            if idx.size > cap:
+                target = float(np.partition(size[idx], -cap)[-cap])
+                prev = self._auto_thresh
+                if prev <= 0 or not (0.8 <= target / max(prev, 1e-9) <= 1.25):
+                    self._auto_thresh = target       # dérive nette -> on réajuste
+                idx = idx[size[idx] >= max(self.min_size, self._auto_thresh)]
+        if idx.size > HARD_CAP:                      # garde-fou de rendu
+            idx = idx[np.argpartition(size[idx], -HARD_CAP)[-HARD_CAP:]]
+        return idx
 
     @staticmethod
     def _ffill(a: np.ndarray) -> np.ndarray:

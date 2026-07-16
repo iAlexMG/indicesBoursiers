@@ -1,4 +1,11 @@
-ib_insync>=0.9.86
-pyqtgraph>=0.13.0
-PyQt5>=5.15
-numpy>=1.24
+# Tableau de bord indices. Le binding est PySide6, comme le projet frère crypto : pyqtgraph
+# abstrait le binding, donc le code de rendu est porté et non réécrit.
+numpy>=1.26,<3
+pyqtgraph>=0.13,<0.15
+PySide6>=6.6,<7
+tzdata>=2024.1
+
+# Accès IBKR (mode dégradé : sans abonnement CME L2, heatmap et DOM restent vides, et le
+# côté agresseur doit être inféré). Plus optionnel depuis le menu « Accès » : les 3 accès
+# tournent en parallèle dans le même processus, donc dans le même env.
+ib_insync>=0.9.86,<0.10

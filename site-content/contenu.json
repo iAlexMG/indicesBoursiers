@@ -34,20 +34,20 @@
         "en": "Real time"
       },
       "accroche": {
-        "fr": "Un seul marché, deux portes : IBKR pour l'écran, Quantower pour les ordres.",
-        "en": "One market, two doors: IBKR for the screen, Quantower for the orders."
+        "fr": "Un seul marché, deux portes : la même donnée, pas la même qualité.",
+        "en": "One market, two doors: the same data, not the same grade."
       },
       "intro": {
-        "fr": "Entre l'historique et l'écran, il y a la donnée vivante. Le CME est un marché unique — un seul carnet, une seule vérité des prix — atteint ici par deux accès qui ne servent pas la même chose.",
-        "en": "Between history and the screen sits the live data. The CME is a single market — one book, one truth about prices — reached here through two accesses that don't serve the same purpose."
+        "fr": "Entre l'historique et l'écran, il y a la donnée vivante. Le CME est un marché unique — un seul carnet, une seule vérité des prix — atteint ici par deux accès qui n'en donnent pas autant l'un que l'autre.",
+        "en": "Between history and the screen sits the live data. The CME is a single market — one book, one truth about prices — reached here through two accesses that don't give away the same amount."
       },
       "statut": {
         "fr": "2 accès à un même marché",
         "en": "2 accesses to a single market"
       },
       "texte": {
-        "fr": "## Ce que la structure du marché change\n\nLe pilier temps réel du projet crypto passe son temps à réconcilier : six exchanges, six dialectes WebSocket, tout ramené au même schéma avant le premier pixel. Rien de tout cela ici. Un future sur indice naît sur un marché central : le carnet du CME est le carnet, il n'y a pas de consensus à reconstruire.\n\nLe travail se déplace donc ailleurs — non pas vers ce que les flux ont de différent, mais vers ce que chaque accès veut bien donner. Et sur ce terrain, un courtier d'indices est nettement plus avare qu'un exchange crypto.",
-        "en": "## What the market's structure changes\n\nThe crypto project's real-time pillar spends its time reconciling: six exchanges, six WebSocket dialects, everything brought back to the same schema before the first pixel. None of that here. An index future is born on a central market: the CME's book is the book, there's no consensus to rebuild.\n\nThe work therefore moves elsewhere — not toward what the feeds have that differs, but toward what each access is willing to give. And on that ground, an index broker is markedly stingier than a crypto exchange."
+        "fr": "## Ce que la structure du marché change\n\nLe pilier temps réel du projet crypto passe son temps à réconcilier : six exchanges, six dialectes WebSocket, tout ramené au même schéma avant le premier pixel. Rien de tout cela ici. Un future sur indice naît sur un marché central : le carnet du CME est le carnet, il n'y a pas de consensus à reconstruire.\n\nLe travail se déplace donc ailleurs — non pas vers ce que les flux ont de différent, mais vers ce que chaque accès veut bien donner. Et là, l'écart est net.\n\n## La même donnée, à deux prix\n\nPar IBKR, le côté agresseur n'est pas fourni et le carnet L2 se paie : deux des quatre couches de l'écran restent vides sans abonnement CME. Par Quantower, la connexion Rithmic donne le carnet complet et le côté agresseur sur 100 % des trades — sans abonnement supplémentaire, parce que l'abonnement payant de la plateforme ne verrouille que ses propres panneaux, pas les événements bruts de sa couche métier.\n\nMême marché, même carnet, deux qualités de donnée. C'est ce qui a fait basculer l'écran de la première porte vers la seconde, et c'est pour montrer l'écart que la première reste branchée : le menu « Accès » du tableau de bord passe de l'une à l'autre en direct.\n\n## Ce que ça coûte\n\nRien n'est gratuit. La porte riche impose de tenir une application de bureau ouverte et de faire passer sa donnée par un pont C# maison ; la porte pauvre se lit depuis Python en trois lignes. Le choix n'est pas « la bonne contre la mauvaise » — c'est un arbitrage, et il est documenté des deux côtés.",
+        "en": "## What the market's structure changes\n\nThe crypto project's real-time pillar spends its time reconciling: six exchanges, six WebSocket dialects, everything brought back to the same schema before the first pixel. None of that here. An index future is born on a central market: the CME's book is the book, there's no consensus to rebuild.\n\nThe work therefore moves elsewhere — not toward what the feeds have that differs, but toward what each access is willing to give. And there, the gap is stark.\n\n## The same data, at two prices\n\nThrough IBKR, the aggressor side isn't provided and the L2 book has to be paid for: two of the screen's four layers stay empty without a CME subscription. Through Quantower, the Rithmic connection gives the full book and the aggressor side on 100% of trades — with no extra subscription, because the platform's paid plan only locks its own panels, not the raw events of its business layer.\n\nSame market, same book, two grades of data. That's what moved the screen from the first door to the second, and showing the gap is why the first stays wired: the dashboard's \"Access\" menu switches between them live.\n\n## What it costs\n\nNothing is free. The rich door means keeping a desktop application open and pushing its data through a hand-built C# bridge; the poor door reads from Python in three lines. The choice isn't \"the good one versus the bad one\" — it's a trade-off, and it's documented on both sides."
       },
       "sousHub": true
     },
@@ -146,12 +146,12 @@
       "monogramme": "QT",
       "couleur": "#1C7ED6",
       "statut": {
-        "fr": "Historique + exécution",
-        "en": "History + execution"
+        "fr": "Historique + écran + exécution",
+        "en": "History + screen + execution"
       },
       "role": {
-        "fr": "La porte Rithmic : la seule qui serve l'historique NQ (ticks avec agresseur à 100 %, ~412 000 par jour, 13 jours de profondeur mesurée ; barres d'une minute pour aller plus loin), et celle où partiront les ordres. Elle fait tourner les indicateurs C# validés par parité. Sa contrainte : rien ne circule si la plateforme est fermée.",
-        "en": "The Rithmic door: the only one serving NQ history (ticks with 100% aggressor, ~412,000 a day, 13 days of measured depth; one-minute bars to go further), and the one where orders will go out. It runs the C# indicators validated by parity. Its constraint: nothing flows if the platform is closed."
+        "fr": "La porte Rithmic, et celle qui porte le projet. Seule à servir l'historique NQ (ticks avec agresseur à 100 %, ~412 000 par jour, 13 jours de profondeur mesurée ; barres d'une minute pour aller plus loin). Seule aussi à alimenter l'écran : carnet L2 complet et côté agresseur fournis, sans abonnement — un pont C# les passe à Python. Elle fait tourner les indicateurs C# validés par parité, et c'est par là que partiront les ordres. Sa contrainte : rien ne circule si la plateforme est fermée.",
+        "en": "The Rithmic door, and the one carrying the project. The only one serving NQ history (ticks with 100% aggressor, ~412,000 a day, 13 days of measured depth; one-minute bars to go further). Also the only one feeding the screen: full L2 book and aggressor side provided, with no subscription — a C# bridge passes them to Python. It runs the C# indicators validated by parity, and it's where orders will go out. Its constraint: nothing flows if the platform is closed."
       }
     },
     {
@@ -160,12 +160,12 @@
       "monogramme": "IB",
       "couleur": "#D81222",
       "statut": {
-        "fr": "Temps réel",
-        "en": "Real time"
+        "fr": "Temps réel — dégradé",
+        "en": "Real time — degraded"
       },
       "role": {
-        "fr": "La porte du tableau de bord : lue directement depuis Python (TWS / IB Gateway, ib_insync), donc celle qui alimente l'écran. Plus avare qu'un exchange crypto — côté agresseur inféré, carnet L2 sur abonnement CME — et muette quand le marché ferme, d'où le mode démo. Candidate désignée pour la contre-épreuve de l'historique, pas encore mesurée.",
-        "en": "The dashboard's door: read straight from Python (TWS / IB Gateway, ib_insync), so it's the one feeding the screen. Stingier than a crypto exchange — inferred aggressor side, L2 book on CME subscription — and silent when the market closes, hence the demo mode. The designated candidate for the history counter-check, not yet measured."
+        "fr": "La seconde porte, gardée en mode dégradé. Elle a un avantage propre : Python la lit directement (TWS / IB Gateway, ib_insync), sans plateforme à tenir ouverte ni pont à déployer. Mais elle est plus avare — côté agresseur inféré par la règle du tick, carnet L2 sur abonnement CME, donc heatmap et DOM vides sans lui — et muette quand le marché ferme, d'où le mode démo. Faute d'abonnement, elle ne sert pas non plus de contre-épreuve à l'historique. Son rôle est celui du témoin : ce qu'elle ne montre pas, l'autre porte le donne gratuitement.",
+        "en": "The second door, kept in degraded mode. It has an edge of its own: Python reads it directly (TWS / IB Gateway, ib_insync), with no platform to keep open and no bridge to deploy. But it is stingier — aggressor side guessed by the tick rule, L2 book on a CME subscription, so heatmap and DOM stay empty without it — and silent when the market closes, hence the demo mode. Without a subscription it doesn't serve as a counter-check on the history either. Its role is that of a control: what it fails to show, the other door gives away for free."
       }
     }
   ]

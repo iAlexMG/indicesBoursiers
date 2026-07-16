@@ -29,7 +29,12 @@ class MarketDataManager:
         for symbol, contract in self.contracts.items():
             self.tickers[symbol] = self.ib.reqMktData(contract, "", False, False)
             self.dom_tickers[symbol] = self.ib.reqMktDepth(contract, numRows=config.DOM_ROWS)
-        self.ib.pendingTickersEvent += self._on_pending_tickers
+        # `keep_ref=True` (et NON `+= self._on_pending_tickers`) : eventkit connecte par
+        # défaut en WEAKREF, donc un manager que l'appelant ne retient pas est collecté
+        # aussitôt et son handler DÉBRANCHÉ — connexion établie, zéro tick, aucune erreur.
+        # L'abonnement doit maintenir en vie ce qui en dépend ; c'est un invariant de ce
+        # composant, pas une consigne à répéter à chaque appelant.
+        self.ib.pendingTickersEvent.connect(self._on_pending_tickers, keep_ref=True)
 
     def _on_pending_tickers(self, tickers):
         """À chaque mise à jour : enregistre le trade (si nouveau) + un snapshot carnet."""
@@ -54,6 +59,17 @@ class MarketDataManager:
             store.add_trade(last, size,
                             bid=ticker.bid if _valid(ticker.bid) else None,
                             ask=ticker.ask if _valid(ticker.ask) else None)
+
+    @property
+    def delayed(self) -> bool:
+        """Le flux servi est-il DIFFÉRÉ ? (`marketDataType` : 3 = différé, 4 = différé+figé)
+
+        On le DEMANDE à TWS plutôt que de le déduire de `config.MARKET_DATA_TYPE` : `3` veut
+        dire « du différé SI je n'ai pas mieux », donc il ne dit rien de ce qu'on reçoit
+        vraiment. C'est cette confusion qui avait fait conclure « ce compte est en temps
+        réel ». Ici, la réponse vient du serveur, et elle suit l'abonnement s'il change.
+        """
+        return any(t.marketDataType in (3, 4) for t in self.tickers.values())
 
     def dom_for(self, symbol):
         """Renvoie (bids, asks) du carnet d'ordres courant (listes de DOMLevel)."""

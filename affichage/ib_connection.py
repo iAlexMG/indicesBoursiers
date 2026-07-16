@@ -1,10 +1,13 @@
 """Gestion de la connexion à IB Gateway et résolution des contrats futures."""
 
+import logging
 from datetime import datetime
 
 from ib_insync import IB, Future
 
 import config
+
+log = logging.getLogger("ibkr")
 
 
 def connect():
@@ -16,11 +19,13 @@ def connect():
     ib = IB()
     ib.connect(config.HOST, config.PORT, clientId=config.CLIENT_ID, readonly=True)
     ib.reqMarketDataType(config.MARKET_DATA_TYPE)
-    print(f"Connecté à IB Gateway {config.HOST}:{config.PORT} (clientId={config.CLIENT_ID})")
+    log.info("connecté à IB Gateway %s:%s (clientId=%s)",
+             config.HOST, config.PORT, config.CLIENT_ID)
 
     # Simple notification (pas de reconnexion ici : appeler connect() depuis
-    # l'event loop provoque une ré-entrance et fait planter l'UI).
-    ib.disconnectedEvent += lambda: print("Déconnecté d'IB Gateway.")
+    # l'event loop provoque une ré-entrance et fait planter l'UI). La reconnexion
+    # est le travail de la boucle d'`IbkrFeed`, dans son thread.
+    ib.disconnectedEvent += lambda: log.info("déconnecté d'IB Gateway.")
     return ib
 
 
@@ -42,5 +47,6 @@ def resolve_front_month(ib, symbol):
 
     front = next((c for c in contracts if _expiry_key(c) >= today), contracts[-1])
     ib.qualifyContracts(front)
-    print(f"{symbol} -> contrat {front.localSymbol} (échéance {front.lastTradeDateOrContractMonth})")
+    log.info("%s -> contrat %s (échéance %s)",
+             symbol, front.localSymbol, front.lastTradeDateOrContractMonth)
     return front

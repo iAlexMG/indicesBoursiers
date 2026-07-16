@@ -1,0 +1,38 @@
+# Environnement du tableau de bord indices. Calqué sur crypto/affichage/environment.yml :
+# même binding (PySide6), même pyqtgraph -> le code de rendu se transfère entre les deux
+# dépôts sans traduction.
+#
+# UN SEUL env pour les 3 accès (Quantower / IBKR / Démo) : ils tournent EN PARALLÈLE dans
+# le même processus (le menu « Accès » ne change que la source LUE, il ne redémarre rien).
+# Deux envs séparés rendraient cette simultanéité impossible.
+#
+# 🪤 `conda env create -f environment.yml` ÉCHOUE sur ce poste (conda 26.5.3) :
+#       CondaToSNonInteractiveError -- repo.anaconda.com/pkgs/{main,r,msys2}
+#    Faute de .condarc, conda ajoute `defaults` tout seul et EXIGE d'en accepter les
+#    conditions d'utilisation. On n'a pourtant aucun besoin de ces canaux (vérifié : le
+#    frère `crypto-agg` ne contient QUE des paquets conda-forge, et ici conda ne fournit
+#    que python + pip -- tout le reste vient de PyPI). MESURÉ, aucun contournement par le
+#    fichier ne marche : le contrôle des CGU tourne AVANT la lecture du yml, donc ni
+#    `- nodefaults` ci-dessous, ni CONDA_CHANNELS=conda-forge n'y changent quoi que ce
+#    soit, et `conda env create` n'accepte pas `--override-channels`.
+#    → CRÉER L'ENV EN DEUX TEMPS (c'est ainsi qu'il a été bâti, le 2026-07-15) :
+#        conda create -n indices-flow --override-channels -c conda-forge python=3.12 pip -y
+#        conda run -n indices-flow python -m pip install -r requirements.txt
+#    Ce fichier reste la référence des versions ; `requirements.txt` en est le miroir pip.
+name: indices-flow
+channels:
+  - conda-forge
+  - nodefaults   # sans effet sur le contrôle des CGU (voir l'encadré) mais garde l'intention
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      # Bornes HAUTES epinglees au major suivant (build reproductible), comme le frere.
+      - numpy>=1.26,<3
+      - pyqtgraph>=0.13,<0.15
+      - PySide6>=6.6,<7
+      - tzdata>=2024.1
+      # Accès IBKR. Sa boucle asyncio vit dans SON thread et n'écrit que dans le FlowStore :
+      # `util.useQt()` (qui ignore PySide6) n'est jamais appelé, le binding ne le concerne pas.
+      # Import GARDÉ côté main.py : absent -> l'accès IBKR se désactive, les autres tournent.
+      - ib_insync>=0.9.86,<0.10
