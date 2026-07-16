@@ -11,7 +11,7 @@ namespace NqTickExtractor;
 /// télécharge (HistoryType.Last, Period minute) aussi loin que le serveur en fournit,
 /// mesurant au passage la profondeur réelle.
 ///
-/// Base produite : H:\indices-historique\NQ-&lt;contrat&gt;-1m.db
+/// Base produite : H:\IndicesBoursiers\historique\NQ-&lt;contrat&gt;-1m.db
 ///   bars(ts PK ms UTC ouverture, open, high, low, close, volume, ticks) + _meta + _ingested.
 /// Pas de côté agresseur dans une barre : le footprint/VP reste réservé à la fenêtre de
 /// ticks ; ces barres étendent l'OHLCV (backtests SMA/MACD/RSI…) via normalize_ohlcv.py
@@ -26,7 +26,7 @@ public sealed class NqBarsExtractorStrategy : Strategy
     [InputParameter("Symbole (NQ front)", 0)]
     public Symbol? Instrument { get; set; }
 
-    [InputParameter("Base SQLite (vide = auto H:\\indices-historique\\NQ-<contrat>-1m.db)", 1)]
+    [InputParameter("Base SQLite (vide = auto H:\\IndicesBoursiers\\historique\\NQ-<contrat>-1m.db)", 1)]
     public string DbPath = "";
 
     [InputParameter("Période (minutes)", 2, 1, 60, 1, 0)]
@@ -323,7 +323,7 @@ public sealed class NqBarsExtractorStrategy : Strategy
     {
         if (!string.IsNullOrWhiteSpace(DbPath)) return DbPath;
         string tag = s.ExpirationDate.ToString("yyyy-MM", CultureInfo.InvariantCulture);
-        return $@"H:\indices-historique\NQ-{tag}-{PeriodMinutes}m.db";
+        return $@"H:\IndicesBoursiers\historique\NQ-{tag}-{PeriodMinutes}m.db";
     }
 
     private static void Exec(SQLiteConnection c, string sql)

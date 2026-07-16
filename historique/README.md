@@ -4,16 +4,16 @@ Deux stratégies Quantower dans la même DLL (`NqExtractor/`) :
 
 | Stratégie | Donnée | Profondeur | Base produite |
 |---|---|---|---|
-| **NQ Tick Extractor** | ticks Last (avec agresseur) | ~2-3 semaines (limite Rithmic) | `H:\indices-historique\NQ-<contrat>.db` |
-| **NQ Bars Extractor** | barres minute (OHLCV + ticks) | **toute la profondeur serveur** (celle du graphique) | `H:\indices-historique\NQ-<contrat>-1m.db` |
+| **NQ Tick Extractor** | ticks Last (avec agresseur) | ~2-3 semaines (limite Rithmic) | `H:\IndicesBoursiers\historique\NQ-<contrat>.db` |
+| **NQ Bars Extractor** | barres minute (OHLCV + ticks) | **toute la profondeur serveur** (celle du graphique) | `H:\IndicesBoursiers\historique\NQ-<contrat>-1m.db` |
 
 Les ticks servent au footprint / volume profile (agresseur requis) ; les barres minute
 étendent l'OHLCV loin en arrière pour les backtests. Fusion des deux par
 `normalize_ohlcv.py` (les lignes issues des ticks restent prioritaires) :
 
 ```bash
-python normalize_ohlcv.py --dir H:\indices-historique\ohlcv\NQ-2026-09 --prefix NQ-CME ^
-                          --bars-db H:\indices-historique\NQ-2026-09-1m.db
+python normalize_ohlcv.py --dir H:\IndicesBoursiers\historique\ohlcv\NQ-2026-09 --prefix NQ-CME ^
+                          --bars-db H:\IndicesBoursiers\historique\NQ-2026-09-1m.db
 ```
 
 ## NQ Bars Extractor (profondeur maximale)
@@ -37,7 +37,7 @@ barres, et `features_vp.csv` (volume profile) reste borné à la fenêtre de tic
 # NQ Tick Extractor — ticks NQ (Rithmic) → SQLite (Phase 1)
 
 Stratégie Quantower (`NQ Tick Extractor`) qui télécharge les ticks NQ via la connexion Rithmic
-**déjà authentifiée dans Quantower** et les écrit dans `H:\indices-historique\NQ-<contrat>.db`, au **schéma
+**déjà authentifiée dans Quantower** et les écrit dans `H:\IndicesBoursiers\historique\NQ-<contrat>.db`, au **schéma
 exact** du projet frère → la chaîne Python aval (`candles.py`, `volume_profile_features.py`)
 tourne sans modification.
 
@@ -97,11 +97,11 @@ powershell -File extractor\NqExtractor\deploy.ps1   # build + copie dans Setting
 ```
 Puis dans Quantower (connecté Rithmic) : panneau **Strategies** → `NQ Tick Extractor` →
 paramètre **Symbole = NQ** (contrat front) → **Start**. La stratégie s'arrête seule à la fin ;
-suivre l'onglet Logs. Résultat : `H:\indices-historique\NQ-2026-09.db`.
+suivre l'onglet Logs. Résultat : `H:\IndicesBoursiers\historique\NQ-2026-09.db`.
 
 ## Vérifier / exploiter (Python, projet frère)
 
 ```powershell
 # chandelles + graphique de contrôle
-python ..\..\Backtesting\history_extractor\candles.py --db H:\indices-historique\NQ-2026-09.db --chart nq.html --open
+python ..\..\Backtesting\history_extractor\candles.py --db H:\IndicesBoursiers\historique\NQ-2026-09.db --chart nq.html --open
 ```
