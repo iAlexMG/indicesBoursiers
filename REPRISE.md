@@ -1,4 +1,4 @@
-# Reprise — état au 2026-07-16 (fin de 3e session) : TOUT FONCTIONNE SUR FLUX RÉEL — NQ + ES par Quantower/Rithmic, IBKR en témoin dégradé avec bandeau « aucun abonnement » ; décision : PROJET 100 % QUANTOWER (abonnement CME REFUSÉ) ; **COMMIT + PUSH FAIT le 2026-07-16** (2 dépôts, voir la fin) ; restent les CAPTURES DÉMO à remplacer (utilisateur) et les textes IBKR
+# Reprise — état au 2026-07-16 (fin de 3e session) : TOUT FONCTIONNE SUR FLUX RÉEL — NQ + ES par Quantower/Rithmic, IBKR en témoin dégradé avec bandeau « aucun abonnement » ; décision : PROJET 100 % QUANTOWER (abonnement CME REFUSÉ) ; **COMMIT + PUSH FAIT le 2026-07-16** (2 dépôts, voir la fin) ; textes IBKR RECADRÉS (limites présentées comme temporaires, l'utilisateur signale qu'il s'abonnera bientôt) ; reste les CAPTURES DÉMO à remplacer (utilisateur)
 
 > **Session du 2026-07-16 en une ligne** : la panne « IBKR n'affiche rien » = handler weakref
 > (piège 13) ; IBKR est bien en DIFFÉRÉ (retard MESURÉ 11,5 min, piège de la mesure circulaire) ;
@@ -755,15 +755,29 @@ local — voir l'historique de la session ; ~30 lignes. Indispensable hors séan
 ## ÉTAT GIT — COMMITÉ ET POUSSÉ le 2026-07-16
 
 **FAIT** (point stable et officiel, à la demande de l'utilisateur) :
-- `indicesBoursiers` : `ecbed1d..829c8a8` sur `origin/main` (30 fichiers, +4111/−362).
-- `iAlexMG.ca` : `af78656..3fd2d80` sur `origin/main` (`data/projets/indices.json`
-  régénéré par `sync-site.py` ; dry-run « à jour » avant de figer).
+- `indicesBoursiers` : `ecbed1d..829c8a8` (refonte, 30 fichiers), `829c8a8..85bd5cf`
+  (REPRISE), `85bd5cf..4da6a09` (recadrage IBKR) sur `origin/main`.
+- `iAlexMG.ca` : `af78656..3fd2d80` puis `3fd2d80..50798cf` sur `origin/main`
+  (`data/projets/indices.json` régénéré par `sync-site.py` à chaque fois).
 - Les deux arbres sont **propres et synchro avec `origin/main`**. `sync-site.py --dry-run`
   rend « à jour » sur les 4 projets. Rien ne reste à committer côté code.
 - ⚠️ **Le mensonge du site N'EST PAS le commit — il reste les CAPTURES DÉMO** (voir §1,
   « LES CAPTURES DU SITE SONT CELLES DU MODE DÉMO ») : le commit a figé les vrais textes,
   pas de vraies images. `All.PNG`/`Dom-Heatmap.PNG` toujours 404, les autres toujours démo.
   **À remplacer par de vraies captures Quantower — fournies par l'utilisateur.**
+- ✅ **Textes IBKR RECADRÉS (2026-07-16, `4da6a09`/`50798cf`)** — décision de l'utilisateur
+  « garder, mais recadrer temporaire » : les limites d'IBKR (différé, carnet L2 vide) sont
+  désormais présentées comme dues à l'ABSENCE d'abonnement CME (un forfait les lèverait), et
+  le seul écart de fond gardé est l'agresseur DEVINÉ — que l'API d'IBKR ne renvoie pas, même
+  en temps réel (corrigé : la page Trades prétendait le contraire via `reqTickByTickData`).
+  Chiffre transitoire « ~15 min » retiré. Intro « Visualisations » aussi dépoussiérée
+  (PyQt5→PySide6, « futures d'Interactive Brokers »→CME, « 2 sources »→3 accès, onglets→boutons).
+- 🔔 **NOUVEAU (2026-07-16) : l'utilisateur SIGNALE l'intention d'acheter un forfait de données
+  CME « prochainement ».** Ça ASSOUPLIT la décision « CME REFUSÉ, ne plus reposer » plus bas —
+  ne plus la citer comme définitive. Le site est maintenant écrit pour ACCUEILLIR l'abonnement
+  (limites IBKR = temporaires). ⚠️ Le jour où il s'abonne : le retard et la heatmap/DOM d'IBKR
+  reviennent, MAIS l'agresseur reste deviné — la comparaison « 2 portes » survit, déplacée vers
+  « ce que même la donnée payante ne dit pas » (déjà mesuré : `reqTickByTickData` ne donne pas le côté).
 
 Ce qu'a contenu le commit `829c8a8` (garde la trace du QUOI) :
 
