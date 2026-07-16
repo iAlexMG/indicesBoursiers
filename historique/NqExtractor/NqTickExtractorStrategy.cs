@@ -23,7 +23,7 @@ public sealed class NqTickExtractorStrategy : Strategy
     [InputParameter("Symbole (NQ front)", 0)]
     public Symbol? Instrument { get; set; }
 
-    [InputParameter("Base SQLite (vide = auto F:\\data\\NQ-<contrat>.db)", 1)]
+    [InputParameter("Base SQLite (vide = auto H:\\indices-historique\\NQ-<contrat>.db)", 1)]
     public string DbPath = "";
 
     [InputParameter("Sonde arrière max (jours)", 2, 1, 365, 1, 0)]
@@ -381,7 +381,7 @@ public sealed class NqTickExtractorStrategy : Strategy
     {
         if (!string.IsNullOrWhiteSpace(DbPath)) return DbPath;
         string tag = s.ExpirationDate.ToString("yyyy-MM", CultureInfo.InvariantCulture);
-        return $@"F:\data\NQ-{tag}.db";
+        return $@"H:\indices-historique\NQ-{tag}.db";
     }
 
     private static void Exec(SQLiteConnection c, string sql)

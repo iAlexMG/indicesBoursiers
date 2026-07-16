@@ -16,12 +16,12 @@ Règle de fusion : à horodatage égal, la ligne issue des TICKS gagne (plus ric
 ⚠️ À la frontière de couverture, le premier bucket 4H/D tick peut être partiel
 (ticks démarrant en cours de bucket) : erreur bornée à 1 bucket par pas de temps.
 
-Produit F:\\data\\ohlcv\\<dir>\\{1H,4H,D}.csv.
+Produit H:\\indices-historique\\ohlcv\\<dir>\\{1H,4H,D}.csv.
 
 Exemples :
-  python normalize_ohlcv.py --dir F:\\data\\ohlcv\\NQ-2026-09 --prefix NQ-CME
-  python normalize_ohlcv.py --dir F:\\data\\ohlcv\\NQ-2026-09 --prefix NQ-CME \\
-                            --bars-db F:\\data\\NQ-2026-09-1m.db
+  python normalize_ohlcv.py --dir H:\\indices-historique\\ohlcv\\NQ-2026-09 --prefix NQ-CME
+  python normalize_ohlcv.py --dir H:\\indices-historique\\ohlcv\\NQ-2026-09 --prefix NQ-CME \\
+                            --bars-db H:\\indices-historique\\NQ-2026-09-1m.db
 """
 from __future__ import annotations
 import argparse

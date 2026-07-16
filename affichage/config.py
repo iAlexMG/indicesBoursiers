@@ -98,7 +98,8 @@ TRADES_WINDOW_SECONDS = 3600   # rétention des trades en mémoire (1 h)
 # exchange n'en sert non plus côté crypto) : la seule façon d'avoir une heatmap historique
 # est d'enregistrer le live au fil de l'eau. L'historique ne grandit donc que vers l'avant,
 # pendant les sessions où l'app tourne. Bases supprimables app fermée (elles se recréent).
-DATA_DIR = "data"          # trades.db + books.db (+ fichiers WAL)
+DATA_DIR = "data"          # trades.db + books.db (+ WAL). Sur ce poste "data" est une
+                           # jonction NTFS -> H:\indices-affichage (les .db vivent sur H:).
 RETENTION_DAYS = 7.0       # purge périodique au-delà -> les bases ne gonflent pas sans fin
 
 # Cadence d'ENREGISTREMENT des snapshots, DÉCOUPLÉE de celle de l'affichage (SNAPSHOT_MS).
