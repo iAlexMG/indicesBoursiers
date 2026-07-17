@@ -31,7 +31,7 @@ process) : d'où le **pont**. Une stratégie C# tourne dans la plateforme et ser
 NDJSON sur un socket local, qu'un client Python stdlib consomme.
 
 ```
-  [quantower]  Rithmic -> Quantower + stratégie « NQ Feed » --NDJSON/TCP--> quantower_feed.py --\
+  [quantower]  Rithmic -> Quantower + stratégie « NQ-ES RealTime » --NDJSON/TCP--> quantower_feed.py --\
   [ibkr]       TWS / IB Gateway --reqMktData/reqMktDepth--> market_data.py -------------------->  >--> FlowStore --> FlowPanel
   [demo]       demo_feed.py (synthétique) ------------------------------------------------------/         (un store par (accès, symbole))
 ```
@@ -48,7 +48,7 @@ NDJSON sur un socket local, qu'un client Python stdlib consomme.
 | `ui.py` | Fenêtre : la barre de commandes + **un seul** `FlowPanel`, rafraîchi par un QTimer. |
 | `main.py` | Point d'entrée : **monte les 3 accès** (`BUILDERS`), la classe `Storage`, et `IbkrFeed` (thread + boucle asyncio propres). |
 | `quantower_feed.py` | Client du pont : thread + reconnexion à backoff plafonné. **stdlib seule.** |
-| `NqFeed/` | Le pont, côté C# : `NqFeedStrategy.cs` (la stratégie « NQ Feed »), `NqFeedProbeStrategy.cs` (la sonde qui a mesuré le flux), `deploy.ps1`. |
+| `NqFeed/` | Le pont, côté C# : `NqFeedStrategy.cs` (la stratégie « NQ-ES RealTime »), `NqFeedProbeStrategy.cs` (la sonde qui a mesuré le flux), `deploy.ps1`. |
 | `backend/` | Le disque : `trade_archive.py`, `book_archive.py`, `recorder.py` (thread d'écriture unique, file bornée, purge de rétention), `book_reader.py` (lecture bornée, hors thread Qt). |
 | `ib_connection.py` | Connexion TWS/IB Gateway (`readonly=True`) + résolution du contrat front-month. |
 | `market_data.py` | Souscriptions `reqMktData` (ticks) + `reqMktDepth` (DOM) → alimente les `FlowStore`. |
@@ -82,14 +82,14 @@ toujours. Pour le flux réel :
 powershell -File NqFeed\deploy.ps1
 
 # 2. Dans Quantower (Rithmic connecté), panneau Strategies :
-#    « + » -> NQ Feed -> Symbole = NQ -> Run -> LAISSER EN WORKING
+#    « + » -> NQ-ES RealTime -> Symbole = NQ -> Run -> LAISSER EN WORKING
 #    ⚠️ Après tout redéploiement du C# : FERMER ET ROUVRIR Quantower (voir plus bas).
 
 # 3. Valider le pont seul, sans GUI :
 python quantower_feed.py --seconds 15
 ```
 
-Une instance de « NQ Feed » **par symbole**, chacune sur son port (`config.QT_FEED_PORTS`).
+Une instance de « NQ-ES RealTime » **par symbole**, chacune sur son port (`config.QT_FEED_PORTS`).
 Un symbole sans port a une vue vide, sans gêner les autres.
 
 > ⚠️ **Quantower charge les DLL de stratégie au démarrage et garde l'ancienne en mémoire.**
@@ -119,7 +119,7 @@ Un symbole sans port a une vue vide, sans gêner les autres.
   ```
   ●  Quantower · NQ — dernier tick il y a 0,2 s · 4551 trades en mémoire
   ○  Quantower · NQ — aucune donnée. Le pont ne répond pas sur 127.0.0.1:5555 —
-     la stratégie « NQ Feed » tourne-t-elle dans Quantower, en Working ?
+     la stratégie « NQ-ES RealTime » tourne-t-elle dans Quantower, en Working ?
   ```
 - **Molette** : zoom du temps (ancré au présent en live). **Ctrl + molette** : zoom des prix.
 - **Glisser** : navigue dans l'historique et **quitte le live** (le bouton `● Live` le reflète).

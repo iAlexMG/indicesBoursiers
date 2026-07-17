@@ -283,7 +283,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.access == "quantower" and err:
             port = config.QT_FEED_PORTS.get(self.symbol)
             return (f"○  {label} · {self.symbol} — aucune donnée. Le pont ne répond pas sur "
-                    f"{config.QT_FEED_HOST}:{port} — la stratégie « NQ Feed » tourne-t-elle "
+                    f"{config.QT_FEED_HOST}:{port} — la stratégie « NQ-ES RealTime » tourne-t-elle "
                     f"dans Quantower, en Working ?")
         if self.access == "ibkr" and err:
             return (f"○  {label} · {self.symbol} — aucune donnée. TWS / IB Gateway ne répond "

@@ -72,7 +72,7 @@ public sealed class NqFeedStrategy : Strategy
     private readonly ConcurrentDictionary<Guid, Client> _clients = new();
     private long _sentTrades, _sentBooks, _dropped;
 
-    public NqFeedStrategy() => Name = "NQ Feed";
+    public NqFeedStrategy() => Name = "NQ-ES RealTime";
 
     /// <summary>Un client connecté : sa file d'attente et son thread d'écriture.</summary>
     private sealed class Client
@@ -125,13 +125,13 @@ public sealed class NqFeedStrategy : Strategy
             return;
         }
 
-        // ÉTIQUETTE de l'instance : deux « NQ Feed » (NQ:5555 et ES:5556) sont indiscernables
+        // ÉTIQUETTE de l'instance : deux « NQ-ES RealTime » (NQ:5555 et ES:5556) sont indiscernables
         // dans le panneau Strategies sans ça.
         // ⚠ `InstanceName` et NON `Name` : `Name` a un setter PROTECTED et sert à dériver
         // `DataFolderName` (le dossier ScriptsData/<nom> (<guid>)/logs). Le toucher
         // éparpillerait les journaux. `InstanceName` a un setter PUBLIC : c'est la propriété
         // prévue pour ça. (Tranché par réflexion sur le BusinessLayer, pas supposé.)
-        InstanceName = $"NQ Feed — {s.Name} :{Port.ToString(Inv)}";
+        InstanceName = $"NQ-ES RealTime — {s.Name} :{Port.ToString(Inv)}";
 
         this.LogInfo($"PONT à l'écoute sur 127.0.0.1:{Port} | {s.Name} ({s.Id}) | tick {s.TickSize.ToString(Inv)} "
                    + $"| {LevelsCount} niveaux/côté @ {SnapshotMs} ms");

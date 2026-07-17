@@ -168,7 +168,7 @@ def _main() -> int:
     store = FlowStore("NQ")
     feed = QuantowerFeed(store, host=args.host, port=args.port, log=lambda m: print(f"  {m}"))
     print(f"Connexion au pont {args.host}:{args.port} pendant {args.seconds:.0f} s…")
-    print("(la stratégie « NQ Feed » doit tourner dans Quantower, Rithmic connecté)\n")
+    print("(la stratégie « NQ-ES RealTime » doit tourner dans Quantower, Rithmic connecté)\n")
     feed.start()
     t0 = time.time()
     try:
@@ -181,7 +181,7 @@ def _main() -> int:
     print(f"\n{'=' * 62}\n  VALIDATION DU PONT — {dt:.1f} s\n{'=' * 62}")
     if not feed.n_trades and not feed.n_books_recv:
         print(f"  RIEN REÇU. Dernière erreur : {feed.last_error}")
-        print("  → Quantower ouvert ? Rithmic connecté ? stratégie « NQ Feed » en Working ?")
+        print("  → Quantower ouvert ? Rithmic connecté ? stratégie « NQ-ES RealTime » en Working ?")
         return 1
 
     print(f"  Trades   : {feed.n_trades} ({feed.n_trades / dt:.1f}/s)")

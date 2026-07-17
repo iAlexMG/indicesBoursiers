@@ -29,7 +29,7 @@ ACCESS = [("quantower", "Quantower"), ("ibkr", "IBKR")]
 SOURCE = "quantower"
 
 # --- Pont Quantower (SOURCE = "quantower") ---------------------------------
-# UNE instance de la stratégie « NQ Feed » PAR symbole, chacune sur son propre port
+# UNE instance de la stratégie « NQ-ES RealTime » PAR symbole, chacune sur son propre port
 # (paramètre « Port TCP » de la stratégie, côté Quantower). Un symbole absent de cette
 # table n'a pas de flux : son onglet reste vide, sans empêcher les autres de tourner.
 QT_FEED_HOST = "127.0.0.1"

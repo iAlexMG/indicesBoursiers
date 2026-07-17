@@ -11,7 +11,7 @@
 
 | Terme | Sens | Exemple ici |
 |---|---|---|
-| **Stratégie Quantower** | un **type de code** (une brique logicielle chargée par Quantower) | `NQ Tick Extractor`, `Phase0 Measure` |
+| **Stratégie Quantower** | un **type de code** (une brique logicielle chargée par Quantower) | `NQ-ES History Ticks`, `Phase0 Measure` |
 | **Stratégie de trading** | un **algorithme d'achat/vente** (les 8 du projet frère) | croisement SMA 50/200, MACD, RSI… |
 
 Quand je dis « j'ai fait une stratégie », je parle du **type de code** (brique Quantower), pas

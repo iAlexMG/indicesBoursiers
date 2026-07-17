@@ -182,7 +182,7 @@ def _log_for(access: str):
 
 
 def build_quantower(storage: Storage, stores: dict) -> list:
-    """Un client de pont PAR symbole, chacun sur le port de sa stratégie « NQ Feed ».
+    """Un client de pont PAR symbole, chacun sur le port de sa stratégie « NQ-ES RealTime ».
 
     Les clients se (re)connectent tout seuls en tâche de fond : on peut lancer l'app avant
     Quantower, fermer Quantower en cours de route, redémarrer une stratégie — le flux

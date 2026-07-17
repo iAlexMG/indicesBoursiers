@@ -40,7 +40,7 @@ public sealed class NqTickExtractorStrategy : Strategy
     private readonly object _lock = new();
     private volatile bool _busy;
 
-    public NqTickExtractorStrategy() => Name = "NQ Tick Extractor";
+    public NqTickExtractorStrategy() => Name = "NQ-ES History Ticks";
 
     protected override void OnRun()
     {

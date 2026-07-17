@@ -232,7 +232,7 @@ de chiffre. Le chiffre est là, la réponse est non — **ne plus reposer la que
 mesure. Défauts : 60 s, 200 niveaux, snapshots 250 ms. Rapport = une ligne par message.
 
 ### Phase 1 ✅ — le pont (validé sur flux réel)
-- **C#** : `affichage/NqFeed/NqFeedStrategy.cs` (stratégie **« NQ Feed »**). Serveur TCP
+- **C#** : `affichage/NqFeed/NqFeedStrategy.cs` (stratégie **« NQ-ES RealTime »**). Serveur TCP
   **127.0.0.1:5555** (jamais `IPAddress.Any` — c'est un flux de marché), **NDJSON**.
   Pousse les **trades** au fil de l'eau + des **snapshots agrégés** à `SnapshotMs` (250 ms).
   **Ne relaie PAS** les 472 updates L2/s : `FlowStore` throttle de toute façon → ~100× de débit
@@ -253,7 +253,7 @@ transférable entre les 2 dépôts.** Validé `QT_QPA_PLATFORM=offscreen` sous `
 flux Rithmic réel : 5 `refresh()` complets (heatmap+scatter+bbo+footprint+DOM), 0 exception.
 - **`config.DEMO_MODE` (booléen) → `config.SOURCE`** = `"quantower"` (défaut) | `"ibkr"` |
   `"demo"`, dispatché par `RUNNERS` dans `main.py`.
-- `config.QT_FEED_PORTS = {"NQ": 5555, "ES": 5556}` — **une instance de « NQ Feed » PAR symbole**,
+- `config.QT_FEED_PORTS = {"NQ": 5555, "ES": 5556}` — **une instance de « NQ-ES RealTime » PAR symbole**,
   chacune sur son port. Symbole sans port = onglet vide, sans gêner les autres.
 - `environment.yml` (env **`indices-flow`**) calqué sur le frère ; `ib_insync` **sorti** des
   dépendances de base (la source quantower n'utilise que la stdlib).
@@ -299,7 +299,7 @@ Toute la barre du frère est portée : **boutons** de symbole (plus d'onglets, *
   muet, indiscernable d'une panne (c'est ce qui a fait croire à un bug). → **ligne d'état**
   sous la barre (`MainWindow.status` / `_status_text`), qui lit `last_error` du flux :
   « ○ Quantower · NQ — aucune donnée. Le pont ne répond pas sur 127.0.0.1:5555 — la
-  stratégie « NQ Feed » tourne-t-elle dans Quantower, en Working ? ». Les flux portent une
+  stratégie « NQ-ES RealTime » tourne-t-elle dans Quantower, en Working ? ». Les flux portent une
   clé `.key = (accès, symbole)` pour ça ; `IbkrFeed.key = ("ibkr", None)` = tous symboles.
 
 ### Phase 4 ✅ — le disque (`affichage/backend/`)
@@ -462,7 +462,7 @@ commits groupés, purge de rétention) · `book_reader.py` (lecture bornée + ho
     CONTENU) + `frozen_for()` + `config.STALE_BOOK_SECONDS = 30` → ligne d'état « ⚠ FLUX GELÉ »
     et bandeau sur le graphe.
     ⚠️ **Diagnostiquer un pont muet dans CET ordre** : (1) le contenu change-t-il ? (2) `qb/qa`
-    bougent-ils ? (3) la stratégie journalise-t-elle ? (`…/ScriptsData/NQ Feed (<guid>)/logs/`
+    bougent-ils ? (3) la stratégie journalise-t-elle ? (`…/ScriptsData/NQ-ES RealTime (<guid>)/logs/`
     — elle n'y consigne QUE les clients TCP, pas la santé du flux). 4 carnets/s **ne prouvent
     que le minuteur**, jamais la donnée.
 18. **BANDEAU sur les graphes** (`FlowPanel.set_notice`, demandé par l'utilisateur pour IBKR :
@@ -516,7 +516,7 @@ commits groupés, purge de rétention) · `book_reader.py` (lecture bornée + ho
       → `LogError` actionnable + `Stop()`. **L'OR est délibéré** : seul `TickSize=NaN` a été
       OBSERVÉ ; `State==Fake` est le test sémantique mais **non mesuré en panne** — l'OR ne
       suppose rien. (⚠️ `double.IsNaN`, jamais `== NaN` : NaN n'égale rien, pas même lui-même.)
-    - **`InstanceName`, PAS `Name`** pour étiqueter l'instance (`"NQ Feed — NQ :5555"`) : deux
+    - **`InstanceName`, PAS `Name`** pour étiqueter l'instance (`"NQ-ES RealTime — NQ :5555"`) : deux
       instances étaient indiscernables dans le panneau. **Tranché par RÉFLEXION, et ça a évité
       une bourde** : `Name` a un setter **protected** et sert à dériver **`DataFolderName`**
       (= le dossier `ScriptsData/<nom> (<guid>)/logs`) → le changer aurait **éparpillé les
@@ -722,7 +722,7 @@ masque : le rollup rendrait des **buckets de 60 s présentés comme des bougies 
 powershell -File affichage\NqFeed\deploy.ps1
 
 # 2. Dans Quantower (Rithmic connecté) : panneau Strategies
-#    « + » -> NQ Feed -> Symbole = NQ -> Run -> LAISSER EN WORKING
+#    « + » -> NQ-ES RealTime -> Symbole = NQ -> Run -> LAISSER EN WORKING
 #    (« NQ Feed Probe » = la sonde, 60 s puis arrêt auto)
 #    ⚠️ Après tout redéploiement du C# : FERMER ET ROUVRIR Quantower.
 

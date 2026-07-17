@@ -33,5 +33,5 @@ foreach ($f in "NqTickExtractor.dll","NqTickExtractor.deps.json","NqTickExtracto
 }
 Write-Host "Déployé dans : $dest (depuis $out)"
 Write-Host "Dans Quantower, panneau Strategies :"
-Write-Host "  - NQ Tick Extractor : ticks (fenêtre ~2-3 semaines) -> NQ-<contrat>.db"
-Write-Host "  - NQ Bars Extractor : barres minute (toute la profondeur serveur) -> NQ-<contrat>-1m.db"
+Write-Host "  - NQ-ES History Ticks : ticks (fenêtre ~2-3 semaines) -> NQ-<contrat>.db"
+Write-Host "  - NQ-ES History Bars 1m : barres minute (toute la profondeur serveur) -> NQ-<contrat>-1m.db"

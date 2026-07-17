@@ -3,7 +3,7 @@
 
 1. (prioritaire) les CSV de candles.py — reconstruits depuis les TICKS, donc avec
    buy_volume — au format : ts,date_utc,open,high,low,close,volume,buy_volume,sell_volume,trades
-2. (complément)  la base de BARRES MINUTE de « NQ Bars Extractor » (--bars-db) —
+2. (complément)  la base de BARRES MINUTE de « NQ-ES History Bars 1m » (--bars-db) —
    bien plus profonde que la fenêtre de ticks Rithmic (~2-3 semaines), mais sans
    côté agresseur : buy_volume reste vide sur ces lignes.
 
@@ -56,7 +56,7 @@ def lire_candles(src: str) -> dict[str, list]:
 
 
 def agreger_bars(bars_db: str, tf: str) -> dict[str, list]:
-    """Barres minute (NQ Bars Extractor) -> {time_iso: ligne canonique} au pas `tf`.
+    """Barres minute (NQ-ES History Bars 1m) -> {time_iso: ligne canonique} au pas `tf`.
     buy_volume inconnu (pas d'agresseur dans une barre) -> champ vide."""
     largeur = TF_MS[tf]
     con = sqlite3.connect(f"file:{bars_db}?mode=ro", uri=True)
@@ -94,7 +94,7 @@ def main() -> int:
     p = argparse.ArgumentParser(description="Fusionne ticks + barres minute -> CSV canoniques LEAN.")
     p.add_argument("--dir", required=True, help="dossier des CSV (in & out)")
     p.add_argument("--prefix", required=True, help="préfixe des CSV candles.py (ex. NQ-CME)")
-    p.add_argument("--bars-db", help="base de barres minute (NQ Bars Extractor) — optionnelle")
+    p.add_argument("--bars-db", help="base de barres minute (NQ-ES History Bars 1m) — optionnelle")
     args = p.parse_args()
 
     for tf in TFS:

@@ -46,7 +46,7 @@ public sealed class NqBarsExtractorStrategy : Strategy
     private readonly object _lock = new();
     private volatile bool _busy;
 
-    public NqBarsExtractorStrategy() => Name = "NQ Bars Extractor";
+    public NqBarsExtractorStrategy() => Name = "NQ-ES History Bars 1m";
 
     protected override void OnRun()
     {
