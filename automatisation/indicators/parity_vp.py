@@ -14,8 +14,8 @@ session au 1H vs sous-briques 30 min du Python) — le test les quantifie.
 from __future__ import annotations
 import argparse, csv, os
 
-REF = r"F:\data\ohlcv\NQ-2026-09\features_vp.csv"
-QT = r"F:\data\parity\NQ-vp-quantower.csv"
+REF = r"H:\IndicesBoursiers\historique\ohlcv\NQ-2026-09\features_vp.csv"
+QT = r"H:\IndicesBoursiers\parity\NQ-vp-quantower.csv"
 
 
 def load(path):

@@ -189,7 +189,7 @@ public sealed class CvdOrderflowIndicator : Indicator
             long bkt = _resMs > 0 ? tNow / _resMs * _resMs : 0;
             long first = _map.Count > 0 ? long.MaxValue : 0, last = 0;
             foreach (var k in _map.Keys) { if (k < first) first = k; if (k > last) last = k; }
-            System.IO.File.WriteAllText(@"F:\data\parity\cvd-debug.txt",
+            System.IO.File.WriteAllText(@"H:\IndicesBoursiers\parity\cvd-debug.txt",
                 $"resMs={_resMs}\nticks={ticks}\nbricks={bricks.Count}\nmap={_map.Count}\n" +
                 $"map_first={(first == long.MaxValue ? "-" : FromMs(first).ToString("o"))}\nmap_last={FromMs(last):o}\n" +
                 $"Count={Count}\nTime(0)={(tNow > 0 ? FromMs(tNow).ToString("o") : "-")}\n" +

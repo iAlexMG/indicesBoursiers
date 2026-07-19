@@ -8,7 +8,7 @@
 # côté crypto.
 #
 # Une barre OHLCV ne connaît que le volume TOTAL de l'heure -> retour aux ticks
-# (F:/data/NQ-<contrat>.db produit par ../../historique/NqExtractor, streaming). Et un
+# (H:/IndicesBoursiers/historique/NQ-<contrat>.db produit par ../../historique/NqExtractor, streaming). Et un
 # profil « journalier » 00:00-23:59 UTC serait un ancrage ARBITRAIRE : il mélange des
 # enchères distinctes. Les ancres qui comptent sont les SESSIONS (heure de New York,
 # donc SENSIBLES au passage à l'heure d'été — zoneinfo s'en charge) :
@@ -23,7 +23,7 @@
 # ⚠️ Les bornes NY tombent en MILIEU de barre 1H UTC (09:30 NY = 13:30 ou 14:30 UTC) :
 # les ticks sont agrégés en sous-briques de 30 min -> frontières de session EXACTES.
 #
-# Produit F:/data/ohlcv/NQ-2026-09/features_vp.csv, UNE ligne par barre 1H :
+# Produit H:/IndicesBoursiers/historique/ohlcv/NQ-2026-09/features_vp.csv, UNE ligne par barre 1H :
 #   time    = ouverture de barre (ISO UTC, même contrat que 1H.csv)
 #   session = asia | london | ny | hors (session active à la CLÔTURE de la barre)
 #   barres  = nombre de barres écoulées dans la session (1 = première clôture)
@@ -45,8 +45,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sessions import bornes_sessions   # définition UNIQUE des sessions (heure NY)
 
-DB = "F:/data/NQ-2026-09.db"
-SORTIE = "F:/data/ohlcv/NQ-2026-09/features_vp.csv"
+DB = "H:/IndicesBoursiers/historique/NQ-2026-09.db"
+SORTIE = "H:/IndicesBoursiers/historique/ohlcv/NQ-2026-09/features_vp.csv"
 TICK_PRIX = 5.0         # taille d'un niveau de prix : 5 pts NQ (20 ticks de 0,25)
 DEMI_MS = 1_800_000     # sous-brique de 30 min : la précision des bornes de session
 HEURE_MS = 3_600_000

@@ -11,9 +11,9 @@ initiale qui converge. Deux références Python pour identifier la convention de
 from __future__ import annotations
 import argparse, csv, datetime as dt, os, sqlite3
 
-REF = r"F:\data\ohlcv\NQ-2026-09\1H.csv"
-QT = r"F:\data\parity\NQ-ema-quantower.csv"
-DB = r"F:\data\NQ-2026-09.db"
+REF = r"H:\IndicesBoursiers\historique\ohlcv\NQ-2026-09\1H.csv"
+QT = r"H:\IndicesBoursiers\parity\NQ-ema-quantower.csv"
+DB = r"H:\IndicesBoursiers\historique\NQ-2026-09.db"
 
 
 def closes_from_db(db: str, res_min: int):

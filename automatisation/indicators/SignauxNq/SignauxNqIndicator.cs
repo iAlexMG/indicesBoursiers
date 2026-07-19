@@ -21,7 +21,7 @@ public sealed class SignauxNqIndicator : Indicator
     public bool ExportSignaux = true;
 
     [InputParameter("Fichier signaux", 1)]
-    public string FichierSignaux = @"F:\data\parity\NQ-signaux-quantower.csv";
+    public string FichierSignaux = @"H:\IndicesBoursiers\parity\NQ-signaux-quantower.csv";
 
     private const int PSma = 200, PRsi = 14, PAtr = 14, SeuilRsi = 50;
     private const double StopMult = 2.0, TakeMult = 4.0;

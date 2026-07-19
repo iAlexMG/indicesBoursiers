@@ -6,7 +6,7 @@ from AlgorithmImports import *
 from datetime import datetime, timedelta
 
 # Source de vérité NQ produite par l'extracteur Quantower + normalize_ohlcv.py.
-DATA_FILE = "F:/data/ohlcv/NQ-2026-09/1H.csv"
+DATA_FILE = "H:/IndicesBoursiers/historique/ohlcv/NQ-2026-09/1H.csv"
 CAPITAL = 100_000
 
 # Spécifications mesurées en Phase 0 (Phase0 Measure) :

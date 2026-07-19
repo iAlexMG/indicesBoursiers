@@ -58,7 +58,7 @@ public sealed class VpSessionNqIndicator : Indicator
     public bool ExportParite = true;
 
     [InputParameter("Fichier parité", 9)]
-    public string FichierParite = @"F:\data\parity\NQ-vp-quantower.csv";
+    public string FichierParite = @"H:\IndicesBoursiers\parity\NQ-vp-quantower.csv";
 
     private const long DemiMs = 1_800_000;
     private const long HeureMs = 3_600_000;

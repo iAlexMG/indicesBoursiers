@@ -72,9 +72,9 @@ les Phases 3-5.
 
 ```powershell
 # 1) données NQ canoniques (depuis la base de ticks de la Phase 1)
-python Quantower/extractor/normalize_ohlcv.py --dir F:\data\ohlcv\NQ-2026-09 --prefix NQ-CME
-python Backtesting/backtests/volume_profile_features.py --db F:/data/NQ-2026-09.db `
-    --out F:/data/ohlcv/NQ-2026-09/features_vp.csv --tick 5
+python historique/normalize_ohlcv.py --dir H:\IndicesBoursiers\historique\ohlcv\NQ-2026-09 --prefix NQ-CME
+python backtesting/backtests/volume_profile_features.py --db H:/IndicesBoursiers/historique/NQ-2026-09.db `
+    --out H:/IndicesBoursiers/historique/ohlcv/NQ-2026-09/features_vp.csv --tick 5
 
 # 2) un backtest (depuis backtests/lean/Launcher/bin/Release)
 $env:PYTHONNET_PYDLL="C:\Users\Moi\anaconda3\envs\backtesting\python311.dll"

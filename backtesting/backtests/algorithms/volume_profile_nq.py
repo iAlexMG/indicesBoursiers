@@ -7,7 +7,7 @@ import os, sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from nq_instrument import setup_nq, CAPITAL
 
-VP_FILE = "F:/data/ohlcv/NQ-2026-09/features_vp.csv"
+VP_FILE = "H:/IndicesBoursiers/historique/ohlcv/NQ-2026-09/features_vp.csv"
 LECTURE = "vah_break"
 FILTRE_DELTA = True
 DELTA_SPAN = 24

@@ -7,8 +7,8 @@
 ## Protocole
 
 - **C# Quantower** : indicateur `SMA Cross NQ (50/200)` sur un graphe NQ 1H (flux Rithmic live),
-  exporte `time,close,sma_rapide,sma_lente,signal` par barre → `F:\data\parity\NQ-sma-quantower.csv`.
-- **Python (référence)** : `indicators/parity_sma.py` recalcule les SMA sur `F:\data\ohlcv\NQ-2026-09\1H.csv`
+  exporte `time,close,sma_rapide,sma_lente,signal` par barre → `H:\IndicesBoursiers\parity\NQ-sma-quantower.csv`.
+- **Python (référence)** : `indicators/parity_sma.py` recalcule les SMA sur `H:\IndicesBoursiers\historique\ohlcv\NQ-2026-09\1H.csv`
   (issu de notre pipeline de ticks). Comparaison **appariée par horodatage UTC**.
 
 ## Résultat mesuré (2026-07-09)

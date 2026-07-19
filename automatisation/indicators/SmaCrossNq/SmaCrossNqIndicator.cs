@@ -38,7 +38,7 @@ public sealed class SmaCrossNqIndicator : Indicator
     public bool ExportParite = true;
 
     [InputParameter("Fichier parité", 5)]
-    public string FichierParite = @"F:\data\parity\NQ-sma-quantower.csv";
+    public string FichierParite = @"H:\IndicesBoursiers\parity\NQ-sma-quantower.csv";
 
     private static readonly DateTime Epoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 

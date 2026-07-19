@@ -36,7 +36,7 @@ public sealed class EmaNqIndicator : Indicator
     public bool ExportParite = true;
 
     [InputParameter("Fichier parité", 4)]
-    public string FichierParite = @"F:\data\parity\NQ-ema-quantower.csv";
+    public string FichierParite = @"H:\IndicesBoursiers\parity\NQ-ema-quantower.csv";
 
     private static readonly DateTime Epoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 

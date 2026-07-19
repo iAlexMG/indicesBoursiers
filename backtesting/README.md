@@ -8,8 +8,8 @@ Stratégies LEAN portées sur NQ (dossier `backtests/algorithms/`), désormais
 ## La chaîne complète (de la donnée au backtest)
 
 ```
-../historique/NqExtractor            ticks NQ (Quantower/Rithmic) -> F:\data\NQ-<contrat>.db
-../historique/normalize_ohlcv.py     candles -> F:\data\ohlcv\NQ-2026-09\{1H,4H,D}.csv
+../historique/NqExtractor            ticks NQ (Quantower/Rithmic) -> H:\IndicesBoursiers\historique\NQ-<contrat>.db
+../historique/normalize_ohlcv.py     candles -> H:\IndicesBoursiers\historique\ohlcv\NQ-2026-09\{1H,4H,D}.csv
 backtesting/backtests/volume_profile_features.py   ticks -> features_vp.csv (POC/VAH/VAL par session)
 backtesting/backtests/algorithms/*.py    les 8 stratégies LEAN (nq_instrument = frais/levier/lecteur)
 ```

@@ -19,7 +19,7 @@ indicateurs & stratégies Quantower → shadow mode → ordres semi-automatisés
 
 ```
 poc/          Phase 0 : stratégie de mesure DANS Quantower (Phase0Strategy) + console diagnostic API (Phase0Poc)
-extractor/    Phase 1 : extracteur incrémental ticks NQ → F:\data\NQ-<contrat>.db
+extractor/    Phase 1 : extracteur incrémental ticks NQ → H:\IndicesBoursiers\historique\NQ-<contrat>.db
 indicators/   Phase 3 : indicateurs C# Quantower (VP session, delta EMA24, signaux par stratégie)
 strategies/   Phase 4-5 : stratégies Quantower (shadow puis exécution avec risk manager)
 docs/         journal.md (décisions datées) + rapports de phase
@@ -37,7 +37,7 @@ docs/         journal.md (décisions datées) + rapports de phase
 - **Schéma SQLite identique** au frère : `trades(trade_id INTEGER PK, ts INTEGER ms UTC,
   price REAL, size REAL, side TEXT buy/sell agresseur)` + `_meta` (symbol, exchange,
   tick_size, multiplier, source=rithmic).
-- **Données sur `F:\data\`** ; credentials en config locale gitignorée.
+- **Données sur `H:\IndicesBoursiers\historique\`** ; credentials en config locale gitignorée.
 - **DLL Quantower** : résolution **dynamique** du dossier `C:\Quantower\TradingPlatform\v*`
   le plus récent (jamais de chemin en dur, jamais versionnée, `Private=false`).
 - Contrat NQ : tick 0,25 pt = 5 $ (20 $/pt) ; MNQ (2 $/pt) pour les premiers ordres.

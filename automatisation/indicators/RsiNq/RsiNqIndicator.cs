@@ -23,7 +23,7 @@ public sealed class RsiNqIndicator : Indicator
     public bool ExportParite = true;
 
     [InputParameter("Fichier parité", 2)]
-    public string FichierParite = @"F:\data\parity\NQ-rsi-quantower.csv";
+    public string FichierParite = @"H:\IndicesBoursiers\parity\NQ-rsi-quantower.csv";
 
     private Indicator? _rsi;             // RSI natif hébergé
     private DateTime _derniereBarre;

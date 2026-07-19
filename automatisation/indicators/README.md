@@ -19,7 +19,7 @@ en marches sur le graphe → afficher en 1 min ne change pas les moyennes (elles
 
 **Utiliser :** dans Quantower, ouvrir un graphe **NQ en 1H** → clic droit → *Add indicator* →
 `SMA Cross NQ (50/200)`. L'indicateur trace les 2 SMA, pose les flèches, et (si `ExportParite`)
-écrit `F:\data\parity\NQ-sma-quantower.csv`.
+écrit `H:\IndicesBoursiers\parity\NQ-sma-quantower.csv`.
 
 **Vérifier la parité :**
 ```powershell
@@ -32,7 +32,7 @@ graphe), pas de formule — à quantifier et expliquer.
 ## `RSI NQ (14, natif)` — 2e indicateur (parité de lissage)
 
 Héberge le **RSI natif** de Quantower (`Core.Instance.Indicators.BuiltIn.RSI`, mode Wilder/SMMA)
-en fenêtre séparée + niveaux 30/70. Exporte `time,close,rsi` → `F:\data\parity\NQ-rsi-quantower.csv`.
+en fenêtre séparée + niveaux 30/70. Exporte `time,close,rsi` → `H:\IndicesBoursiers\parity\NQ-rsi-quantower.csv`.
 Contrairement à la SMA, le RSI a un **lissage** et un **seed** → parité intéressante.
 
 **Utiliser :** graphe NQ 1H → *Add indicator* → `RSI NQ (14, natif)`.

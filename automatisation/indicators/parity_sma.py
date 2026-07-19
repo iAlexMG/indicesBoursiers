@@ -17,8 +17,8 @@ import argparse
 import csv
 import os
 
-REF_CSV = r"F:\data\ohlcv\NQ-2026-09\1H.csv"
-QT_CSV = r"F:\data\parity\NQ-sma-quantower.csv"
+REF_CSV = r"H:\IndicesBoursiers\historique\ohlcv\NQ-2026-09\1H.csv"
+QT_CSV = r"H:\IndicesBoursiers\parity\NQ-sma-quantower.csv"
 
 
 def sma_series(closes: list[float], n: int) -> list[float | None]:
