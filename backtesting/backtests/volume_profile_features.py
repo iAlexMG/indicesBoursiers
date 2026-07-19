@@ -8,7 +8,7 @@
 # côté crypto.
 #
 # Une barre OHLCV ne connaît que le volume TOTAL de l'heure -> retour aux ticks
-# (F:/data/NQ-<contrat>.db produit par ../historique/NqExtractor, streaming). Et un
+# (F:/data/NQ-<contrat>.db produit par ../../historique/NqExtractor, streaming). Et un
 # profil « journalier » 00:00-23:59 UTC serait un ancrage ARBITRAIRE : il mélange des
 # enchères distinctes. Les ancres qui comptent sont les SESSIONS (heure de New York,
 # donc SENSIBLES au passage à l'heure d'été — zoneinfo s'en charge) :

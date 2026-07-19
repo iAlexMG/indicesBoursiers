@@ -127,7 +127,7 @@ challenge + tampon 2 sem. suffisent ; la 1re passe rattrape les jours manqués. 
 
 ## 2026-07-08 — Phase 2 : backtests NQ des 8 stratégies (LEAN) — TERMINÉE
 
-Code dans `../Backtesting/backtests/algorithms/nq/` (module partagé `nq_instrument.py` + 8 algos).
+Code dans `../../backtesting/backtests/algorithms/` (module partagé `nq_instrument.py` + 8 algos).
 Données : `normalize_ohlcv.py` (candles→format canonique LEAN) + `features_vp.csv` NQ (tick 5 pts)
 via `volume_profile_features.py --db/--out` (args ajoutés, rétrocompatibles).
 

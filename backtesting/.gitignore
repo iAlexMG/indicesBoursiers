@@ -1,0 +1,7 @@
+# Dépôt externe : moteur LEAN cloné depuis GitHub (reconstructible). Pas encore
+# monté côté indices — même foyer prévu que chez le frère crypto.
+backtests/lean/
+
+# Python
+__pycache__/
+*.pyc

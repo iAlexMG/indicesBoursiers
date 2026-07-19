@@ -2,7 +2,7 @@
 
 > Statut : **TERMINÉE** (run 2026-07-08). Les 8 stratégies du projet frère rejouées sur les
 > données NQ collectées en Phase 1, moteur LEAN natif. Le code vit dans
-> `../Backtesting/backtests/algorithms/nq/` (voir « Reproduire » plus bas).
+> `../../backtesting/backtests/algorithms/` (voir « Reproduire » plus bas).
 
 ## Ce qui change vs le monde crypto (mesuré, pas supposé)
 
@@ -81,9 +81,9 @@ $env:PYTHONNET_PYDLL="C:\Users\Moi\anaconda3\envs\backtesting\python311.dll"
 $env:PYTHONHOME="C:\Users\Moi\anaconda3\envs\backtesting"
 dotnet QuantConnect.Lean.Launcher.dll --algorithm-language Python `
     --algorithm-type-name VolumeProfileNq `
-    --algorithm-location "../../../../algorithms/nq/volume_profile_nq.py"
+    --algorithm-location "../../../../algorithms/volume_profile_nq.py"
 ```
 
-Algos NQ : `../Backtesting/backtests/algorithms/nq/` (module partagé `nq_instrument.py` +
+Algos NQ : `../../backtesting/backtests/algorithms/` (module partagé `nq_instrument.py` +
 `buyhold_nq`, `sma_croisement_nq`, `macd_nq`, `rsi_retour_moyenne_nq`, `bollinger_nq`,
 `risque_stops_nq`, `strategie_avancee_nq`, `volume_profile_nq`).
