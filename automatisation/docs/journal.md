@@ -14,6 +14,10 @@ seulement (`UpdateReason` + garde de temps) ; fill pris au close du signal (la s
 se remplit au trade suivant — écart ~1 tick, assumé). N'émet rien. Compile 0/0 net10.0,
 ✅ déployé dans `Settings\Scripts\Indicators\OrbNqVisuel`. H2/H3 : visuels à venir SUR
 DEMANDE, un à la fois (décision user : une stratégie testée à la fois).
+**✅ VALIDÉ SUR GRAPHIQUE par l'utilisateur (capture du 2026-07-20 14:19)** : vendredi =
+plage large (plongeon-rebond d'ouverture), entrée longue 10:35, TP touché 11:50 ; lundi =
+bornes 29 192,50 / 28 979,75 (spike de 09:55), short sur cassure basse ~10:02, SL touché
+~10:07 (rebond) — bornes, flèches, brackets et sorties tous lisibles et conformes.
 
 ## 2026-07-20 (nuit) — MODE CONFIRMATION : le semi-automatisé, l'humain dans la boucle
 

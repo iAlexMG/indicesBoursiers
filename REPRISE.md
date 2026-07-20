@@ -1,3 +1,19 @@
+> **MAJ 2026-07-20 (session AUTOMATISATION — chantier hybrides, l'affichage ci-dessous n'a
+> pas bougé)** : le chantier des **3 stratégies hybrides** est CODE-COMPLET et POUSSÉ
+> (commits `a9f3af3` jumeaux LEAN volet C · `d06ac26` code live + sonde · `600803a` mode
+> shadow · `eedb678` mode confirmation · `2a61298` visuel H1). En bref : jumeaux backtest
+> validés dans `backtesting/backtests/algorithms/` ; DLL `Hybrides` (net10.0) déployée —
+> H1 ORB / H2 SMA suiveur / H3 RSI bracket + sonde « Ordres Probe (SIM) », **sélecteur
+> 3 modes** SHADOW (défaut, zéro ordre) / **CONFIRMATION** (pop-up accepte/refuse :
+> l'HUMAIN initie chaque ordre — ⛔ essai Simulator 7 j MORT, et Apex interdit les bots,
+> dixit l'utilisateur) / AUTO ; parité indicateurs C#↔LEAN MESURÉE ; **indicateur
+> « Hybride H1 ORB (visuel) » déployé et VALIDÉ sur graphique par l'utilisateur**
+> (bornes, flèches, brackets, sorties lisibles — test « une stratégie à la fois », H1
+> d'abord, H2/H3 sur demande). 🪤 anciens deploy.ps1 : `..\..\..\Settings` = fantôme
+> `C:\Settings` (motif corrigé dans `automatisation/hybrides/deploy.ps1`). **REPRENDRE
+> PAR : `Claude_Code/Prompt_Automatisation_Hybrides.md`** (état + prochaines actions) ;
+> détail : `automatisation/docs/journal.md`.
+
 > **MAJ 2026-07-19 (session BACKTESTING — pilier distinct, l'affichage ci-dessous n'a pas
 > bougé)** : le pilier `backtesting/` est passé au **1 m** et POUSSÉ (dépôt `971393a`, site
 > `cc38eed`) — re-calibrage v2 anti-churn porté sur les 8 stratégies, fenêtre
