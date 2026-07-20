@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- net10.0 : toute NOUVELLE compile contre la DLL v1.146.14 (CS1705 sinon). -->
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>OrbNqVisuel</AssemblyName>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+
+  <Target Name="CheckQuantowerBin" BeforeTargets="BeforeBuild">
+    <Error Condition="'$(QuantowerBin)' == '' Or !Exists('$(QuantowerBin)\TradingPlatform.BusinessLayer.dll')"
+           Text="QuantowerBin absent ou invalide. Compiler via deploy.ps1." />
+  </Target>
+
+  <ItemGroup>
+    <!-- Les MÊMES indicateurs/cadre que la stratégie H1 (aucune dépendance Quantower
+         dedans) : une seule implémentation des formules, le visuel ne peut pas dériver. -->
+    <Compile Include="..\..\hybrides\Indicateurs.cs" />
+    <Compile Include="..\..\hybrides\CadreSeance.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="TradingPlatform.BusinessLayer">
+      <HintPath>$(QuantowerBin)\TradingPlatform.BusinessLayer.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

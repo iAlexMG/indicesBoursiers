@@ -67,6 +67,18 @@ parité (native vs Python, seed). Modes fixes = EMA calculée sur l'historique d
 (seed SMA, lissage 2/(N+1)) et projetée → afficher en 1 min ne change pas l'EMA horaire.
 Parité : `python indicators\parity_ema.py` (2 conventions de seed).
 
+## `Hybride H1 ORB (visuel)` — la stratégie H1 dessinée sur le graphe (2026-07-20)
+
+Le VISUEL de la stratégie `Hybride H1 ORB (NQ)` (chantier automatisation, `../hybrides/`),
+à poser sur un graphe **NQ 1 m** : bornes de la plage 09:30-10:00 ET (lignes bleues,
+tracées de 10:00 à 16:55), flèche d'entrée à la première cassure confirmée (10:00-12:00,
+une par jour), lignes SL (rouge pointillé) / TP (vert pointillé) pendant le trade,
+rond de sortie (vert=TP, rouge=SL, orange=flat). **Mêmes formules que la stratégie et le
+jumeau LEAN** (Compile Include de `../hybrides/Indicateurs.cs` — une seule implémentation,
+parité C#↔LEAN déjà mesurée). Décisions aux clôtures de barres seulement ; n'émet rien
+(ni ordre, ni pop-up, ni journal). Compile **net10.0** (pas net8 : CS1705 contre la
+v1.146.14). **Déployer :** `powershell -File indicators\OrbNqVisuel\deploy.ps1`.
+
 ## `Signaux NQ (strat. avancée)` — marqueurs entrée/sortie sur le graphe
 
 Reproduit sur le graphe la logique de la stratégie n°7 (`strategie_avancee_nq`) : régime SMA 200

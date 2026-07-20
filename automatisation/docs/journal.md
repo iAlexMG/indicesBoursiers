@@ -1,5 +1,20 @@
 # Journal du projet — décisions datées & mesures clés
 
+## 2026-07-20 (nuit, suite) — VISUEL H1 : l'indicateur « Hybride H1 ORB (visuel) »
+
+**Demande utilisateur** : tester UNE stratégie à la fois, H1 d'abord, et VOIR sur le
+graphique — lignes, niveaux, marqueurs. Réponse : un INDICATEUR (les stratégies Quantower
+ne dessinent pas), patron `SignauxNq` de la phase 3. `indicators/OrbNqVisuel/` — sur un
+graphe **NQ 1 m** : bornes de la plage (bleu, 10:00→16:55 ET), flèche d'entrée à la
+cassure (une/jour), SL rouge / TP vert pointillés pendant le trade, rond de sortie
+(TP/SL/flat). **Une seule implémentation des formules** : le csproj inclut
+`hybrides/Indicateurs.cs` (+ `CadreSeance.cs`) par Compile Include — le visuel ne peut
+pas dériver de la stratégie ni du jumeau (parité déjà mesurée). Décisions aux clôtures
+seulement (`UpdateReason` + garde de temps) ; fill pris au close du signal (la stratégie
+se remplit au trade suivant — écart ~1 tick, assumé). N'émet rien. Compile 0/0 net10.0,
+✅ déployé dans `Settings\Scripts\Indicators\OrbNqVisuel`. H2/H3 : visuels à venir SUR
+DEMANDE, un à la fois (décision user : une stratégie testée à la fois).
+
 ## 2026-07-20 (nuit) — MODE CONFIRMATION : le semi-automatisé, l'humain dans la boucle
 
 **Décision utilisateur** : sur Apex, remplacer les ordres automatiques par des
