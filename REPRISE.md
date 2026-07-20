@@ -1,3 +1,14 @@
+> **MAJ 2026-07-19 (session BACKTESTING — pilier distinct, l'affichage ci-dessous n'a pas
+> bougé)** : le pilier `backtesting/` est passé au **1 m** et POUSSÉ (dépôt `971393a`, site
+> `cc38eed`) — re-calibrage v2 anti-churn porté sur les 8 stratégies, fenêtre
+> 2026-06-01→07-10 alignée sur le frère crypto, verdict hors-échantillon « pas d'edge
+> démontré » (frais non-sujet, le levier ×6 du contrat entier est l'histoire), hub + 8 fiches
+> FR/EN sur le site. Recette LEAN documentée dans `backtesting/README.md` (Launcher du frère,
+> code 82 normal). ⚠️ Mesuré : la base de barres 1 m n'est PROFONDE que depuis fin janvier
+> 2026 (avant : 1 jour-échantillon/mois servi par Rithmic). **RESTE : collecte ES lundi
+> 2026-07-20 pendant NY, puis rejouer le banc — prompt recyclé dans
+> `Claude_Code/Prompt_Backtesting_Indices_1m.md`.**
+
 # Reprise — état au 2026-07-16 (fin de 3e session) : TOUT FONCTIONNE SUR FLUX RÉEL — NQ + ES par Quantower/Rithmic, IBKR en témoin dégradé avec bandeau « aucun abonnement » ; décision : PROJET 100 % QUANTOWER (abonnement CME REFUSÉ) ; **COMMIT + PUSH FAIT le 2026-07-16** (2 dépôts, voir la fin) ; textes IBKR RECADRÉS (limites présentées comme temporaires, l'utilisateur signale qu'il s'abonnera bientôt) ; reste les CAPTURES DÉMO à remplacer (utilisateur)
 
 > **Session du 2026-07-16 en une ligne** : la panne « IBKR n'affiche rien » = handler weakref

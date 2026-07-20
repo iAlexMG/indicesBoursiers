@@ -4,6 +4,13 @@
 > données NQ collectées en Phase 1, moteur LEAN natif. Le code vit dans
 > `../../backtesting/backtests/algorithms/` (voir « Reproduire » plus bas).
 
+> **MAJ 2026-07-19 — ce document décrit la campagne 1H ; le banc a depuis été rejoué en
+> 1 MINUTE** (re-calibrage v2 anti-churn du frère, fenêtre 2026-06-01→07-10, jugement
+> hors-échantillon mi-fenêtre). Les chiffres 1H ci-dessous restent la démonstration de la
+> Phase 2 ; les résultats à jour vivent dans `../../backtesting/site-content/contenu.json`
+> et sur le site (pilier Backtesting, 8 fiches). Recette du run 1 m :
+> `../../backtesting/README.md`.
+
 ## Ce qui change vs le monde crypto (mesuré, pas supposé)
 
 - **Instrument** : `SymbolProperties` NQ = tick 0,25 / multiplicateur **20** / lot **1** (contrats

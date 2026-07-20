@@ -5,11 +5,12 @@ Deux stratégies Quantower dans la même DLL (`NqExtractor/`) :
 | Stratégie | Donnée | Profondeur | Base produite |
 |---|---|---|---|
 | **NQ-ES History Ticks** | ticks Last (avec agresseur) | ~2-3 semaines (limite Rithmic) | `H:\IndicesBoursiers\historique\NQ-<contrat>.db` |
-| **NQ-ES History Bars 1m** | barres minute (OHLCV + ticks) | **toute la profondeur serveur** (celle du graphique) | `H:\IndicesBoursiers\historique\NQ-<contrat>-1m.db` |
+| **NQ-ES History Bars 1m** | barres minute (OHLCV + ticks) | **toute la profondeur serveur** (celle du graphique) ⚠️ voir la mesure ci-dessous | `H:\IndicesBoursiers\historique\NQ-<contrat>-1m.db` |
 
 Les ticks servent au footprint / volume profile (agresseur requis) ; les barres minute
 étendent l'OHLCV loin en arrière pour les backtests. Fusion des deux par
-`normalize_ohlcv.py` (les lignes issues des ticks restent prioritaires) :
+`normalize_ohlcv.py` (les lignes issues des ticks restent prioritaires), qui produit
+`{1m,1H,4H,D}.csv` — le **1m** est le CSV que consomment les backtests LEAN :
 
 ```bash
 python normalize_ohlcv.py --dir H:\IndicesBoursiers\historique\ohlcv\NQ-2026-09 --prefix NQ-CME ^
@@ -17,6 +18,13 @@ python normalize_ohlcv.py --dir H:\IndicesBoursiers\historique\ohlcv\NQ-2026-09 
 ```
 
 ## NQ-ES History Bars 1m (profondeur maximale)
+
+> ⚠️ **« Toute la profondeur serveur » MESURÉE le 2026-07-19 (NQ-2026-09)** : avant fin
+> janvier 2026, Rithmic ne sert qu'**un jour-échantillon par mois** (~120 barres) — les
+> 56 mois « ingérés » de 2020-08 à 2026-01 sont des miettes, pas de l'historique continu.
+> La vraie profondeur exploitable commence au **2026-01-27**. Toute fenêtre de backtest
+> doit se choisir dans cette plage (le rebuild 1 m utilise 2026-06-01→07-10, alignée sur
+> le frère crypto).
 
 Au premier run (base vide), la stratégie **sonde vers l'arrière** mois par mois depuis le
 mois courant, jusqu'à N mois vides consécutifs (défaut 3) ou la borne « Sonde max » (défaut
