@@ -1,5 +1,25 @@
 # Journal du projet — décisions datées & mesures clés
 
+## 2026-07-20 (soir) — ⛔ Essai 7 j MORT → pivot MODE SHADOW (défaut) + sonde manuelle Apex
+
+Constat utilisateur : l'essai 7 jours du Trading Simulator est « terminé » (déjà consommé)
+— la voie d'accès retenue au volet B est morte. Contrainte utilisateur (source d'autorité
+sur son compte) : **Apex interdit les transactions automatisées et les bots** → ni les
+hybrides ni la sonde logicielle sur le compte Apex, peu importe l'objectif POC ; « respecter
+les règles à la lettre » = zéro ordre logiciel sur ce compte. **Décisions** :
+1. **MODE SHADOW ajouté aux 3 hybrides et COCHÉ PAR DÉFAUT** (= la phase 4 du plan,
+   gratuite) : décisions sur flux réel + journal NDJSON identique (ids `shadow-N`), cycle
+   de vie des ordres SIMULÉ AU TICK dans `HybrideStrategyBase` (fill au trade suivant,
+   bracket vérifié à chaque trade, suiveur, annulations, flat/kill) — AUCUN appel à l'API
+   d'ordres, compte ignoré. Compile 0 erreur/0 warning, DLL redéployée.
+2. **Sonde MANUELLE sur Apex** ([sonde-manuelle-apex.md](sonde-manuelle-apex.md)) : la
+   checklist mécanique du §3 se répond À LA MAIN en MNQ ×1 (trading manuel = permis) ;
+   ⛔ ne JAMAIS fermer Quantower avec une position ouverte (survie du stop = question au
+   support, recommandée MAINTENANT — elle était en stand-by).
+3. La mécanique d'ordres PAR NOTRE CODE attendra : achat du Simulator (pack Advanced
+   Features / All-in-One, garantie 10 j — décision de coût utilisateur) ou phase 5. La
+   sonde « Ordres Probe (SIM) » et la garde anti-compte-réel restent prêtes, inchangées.
+
 ## 2026-07-20 — CODE LIVE FAIT : les 3 hybrides + la sonde « Ordres Probe (SIM) » (`hybrides/`)
 
 **UNE DLL (`Hybrides.dll`, net10.0), 4 stratégies** : `OrbHybride` (H1, bracket),

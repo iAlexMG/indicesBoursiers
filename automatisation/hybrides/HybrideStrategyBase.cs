@@ -33,10 +33,17 @@ public abstract class HybrideStrategyBase : Strategy
     [InputParameter("Symbole (NQ front)", 0)]
     public Symbol? Instrument { get; set; }
 
-    [InputParameter("Compte (Trading Simulator pour le POC)", 1)]
+    [InputParameter("Compte (inutile en shadow ; Trading Simulator sinon)", 1)]
     public Account? Compte { get; set; }
 
-    [InputParameter("Autoriser un compte réel (phase 5 SEULEMENT)", 2)]
+    // MODE SHADOW = la phase 4 du plan : la stratégie décide et journalise, mais ne place
+    // AUCUN ordre — les brackets sont SIMULÉS au tick (patron des jumeaux LEAN, porté au
+    // flux réel). C'est la voie retenue le 2026-07-20 (essai Simulator mort, et les règles
+    // Apex interdisent les bots — dixit l'utilisateur, source d'autorité sur son compte).
+    [InputParameter("Mode SHADOW (décisions journalisées, ZÉRO ordre)", 2)]
+    public bool ModeShadow = true;
+
+    [InputParameter("Autoriser un compte réel (phase 5 SEULEMENT)", 11)]
     public bool AutoriserCompteReel = false;
 
     [InputParameter("Contrats", 3, 1, 10, 1, 0)]
@@ -71,8 +78,8 @@ public abstract class HybrideStrategyBase : Strategy
     /// font tout : agrégation TF, indicateurs, décisions (via les helpers de la base).</summary>
     protected abstract void SurBarre1m(in Barre1m barre);
 
-    /// <summary>La position vient d'ouvrir (fill confirmé).</summary>
-    protected virtual void SurPositionOuverte(Position p) { }
+    /// <summary>La position vient d'ouvrir (fill confirmé — réel ou simulé en shadow).</summary>
+    protected virtual void SurPositionOuverte(double prixEntree) { }
 
     /// <summary>La position vient de fermer (raison : SL | TP | SIGNAL | FLAT | KILL | AUTRE).</summary>
     protected virtual void SurPositionFermee(string raison) { }
@@ -106,8 +113,18 @@ public abstract class HybrideStrategyBase : Strategy
     private int _slTicksAttente, _tpTicksAttente;
     private (string cle, double valeur)[] _indicateursEntree = Array.Empty<(string, double)>();
 
-    protected bool EnPosition => PositionCourante is not null;
-    protected bool SortieEnCours => _sortieEnCours;
+    // --- Position SIMULÉE du mode shadow (le moteur des jumeaux, porté au tick) ---------
+    private int _shadowSens;                      // 0 = flat, ±1 = sens de la position simulée
+    private double _shadowStop = double.NaN;      // niveaux du bracket simulé
+    private double _shadowTake = double.NaN;      // NaN = pas de TP (patron H2)
+    private bool _shadowEntreeAttendue;           // market « envoyé », fill au prochain trade
+    private Side _shadowSensAttendu;
+    private bool _shadowSortieAttendue;           // sortie signal « envoyée », fill au prochain trade
+    private string _shadowRaisonSortie = "";
+    private int _shadowNumero;                    // ids shadow-N / shadow-N-bracket
+
+    protected bool EnPosition => PositionCourante is not null || _shadowSens != 0;
+    protected bool SortieEnCours => _sortieEnCours || _shadowSortieAttendue;
 
     // ======================================================================== DÉMARRAGE =
     protected override void OnRun()
@@ -124,7 +141,6 @@ public abstract class HybrideStrategyBase : Strategy
     {
         var s = Instrument;
         if (s is null) { this.LogError("Aucun symbole sélectionné (choisir NQ front)."); this.Stop(); return; }
-        if (Compte is null) { this.LogError("Aucun compte sélectionné."); this.Stop(); return; }
 
         // Symbole vivant (piège du pont NqFeed : un symbole résolu n'est pas un symbole vivant).
         if (s.State == BusinessObjectState.Fake || double.IsNaN(s.TickSize) || s.TickSize <= 0)
@@ -135,37 +151,50 @@ public abstract class HybrideStrategyBase : Strategy
             return;
         }
 
-        // GARDE ANTI-COMPTE-RÉEL : jamais d'ordre hors Simulator tant que la phase 5 n'a pas
-        // explicitement ouvert la porte (paramètre). Le type de connexion fait foi.
-        var typeConn = Compte.Connection?.Type;
-        if (typeConn != ConnectionType.TradingSimulator && !AutoriserCompteReel)
+        string etiquetteCompte;
+        if (ModeShadow)
         {
-            this.LogError($"Compte « {Compte.Name} » sur une connexion {typeConn?.ToString() ?? "?"} : "
-                        + "REFUSÉ. Ces stratégies ne tradent que le Trading Simulator tant que "
-                        + "« Autoriser un compte réel » (phase 5) n'est pas coché.");
-            this.Stop();
-            return;
+            // SHADOW : zéro ordre, donc zéro compte — le paramètre Compte est IGNORÉ même
+            // s'il est rempli (aucun chemin de code ne le touche).
+            etiquetteCompte = "SHADOW (zéro ordre)";
         }
+        else
+        {
+            if (Compte is null) { this.LogError("Aucun compte sélectionné (requis hors shadow)."); this.Stop(); return; }
 
-        // Type d'ordre MARKET servi par la connexion du symbole (jamais un id deviné).
-        var market = s.GetAlowedOrderTypes(OrderTypeUsage.Order)?
-            .FirstOrDefault(t => t.Behavior == OrderTypeBehavior.Market);
-        if (market is null)
-        {
-            this.LogError("La connexion ne sert pas d'ordre MARKET pour ce symbole (GetAlowedOrderTypes).");
-            this.Stop();
-            return;
+            // GARDE ANTI-COMPTE-RÉEL : jamais d'ordre hors Simulator tant que la phase 5 n'a
+            // pas explicitement ouvert la porte (paramètre). Le type de connexion fait foi.
+            var typeConn = Compte.Connection?.Type;
+            if (typeConn != ConnectionType.TradingSimulator && !AutoriserCompteReel)
+            {
+                this.LogError($"Compte « {Compte.Name} » sur une connexion {typeConn?.ToString() ?? "?"} : "
+                            + "REFUSÉ. Ces stratégies ne tradent que le Trading Simulator tant que "
+                            + "« Autoriser un compte réel » (phase 5) n'est pas coché.");
+                this.Stop();
+                return;
+            }
+
+            // Type d'ordre MARKET servi par la connexion du symbole (jamais un id deviné).
+            var market = s.GetAlowedOrderTypes(OrderTypeUsage.Order)?
+                .FirstOrDefault(t => t.Behavior == OrderTypeBehavior.Market);
+            if (market is null)
+            {
+                this.LogError("La connexion ne sert pas d'ordre MARKET pour ce symbole (GetAlowedOrderTypes).");
+                this.Stop();
+                return;
+            }
+            _idTypeMarket = market.Id;
+            etiquetteCompte = $"{Compte.Name} ({typeConn})";
         }
-        _idTypeMarket = market.Id;
 
         Cadre = new CadreSeance(EntreesDebutEt, EntreesFinEt, HeureFlatEt, PertesMax, CooldownMin);
         _journal = new JournalNdjson(JournalDossier, Slug, s.Root ?? s.Name, m => this.LogError(m));
-        InstanceName = $"{Name} — {s.Name} @ {Compte.Name}";
+        InstanceName = $"{Name} — {s.Name} @ {etiquetteCompte}";
 
-        this.LogInfo($"{Name} | {s.Name} (tick {s.TickSize.ToString(Inv)}) | compte {Compte.Name} "
-                   + $"({typeConn}) | entrées {EntreesDebutEt}-{EntreesFinEt} ET | flat {HeureFlatEt} ET | "
+        this.LogInfo($"{Name} | {s.Name} (tick {s.TickSize.ToString(Inv)}) | {etiquetteCompte} | "
+                   + $"entrées {EntreesDebutEt}-{EntreesFinEt} ET | flat {HeureFlatEt} ET | "
                    + $"garde-fou {PertesMax} | cooldown {CooldownMin} m | journal : {_journal.Dossier}");
-        Journal("demarrage", raison: $"compte {Compte.Name} ({typeConn}), flat {HeureFlatEt} ET");
+        Journal("demarrage", raison: $"{etiquetteCompte}, flat {HeureFlatEt} ET");
 
         // SEED : les indicateurs s'amorcent sur l'historique 1 m (jamais « attendre que ça
         // chauffe » en séance — spec). Le même chemin SurBarre1m que le live, ordres coupés.
@@ -216,7 +245,17 @@ public abstract class HybrideStrategyBase : Strategy
         // KILL SWITCH (spec) : l'arrêt de la stratégie = tout annuler + liquider.
         lock (Verrou)
         {
-            if (PositionCourante is not null || DesOrdresVivants())
+            if (ModeShadow)
+            {
+                if (_shadowSens != 0 || _shadowEntreeAttendue)
+                {
+                    _shadowEntreeAttendue = false;
+                    _shadowSortieAttendue = false;
+                    Journal("kill", prix: DernierClose, raison: "arrêt de la stratégie (simulé : position shadow soldée)");
+                    if (_shadowSens != 0) FermerShadow(DernierClose, "KILL", pertePleine: false);
+                }
+            }
+            else if (PositionCourante is not null || DesOrdresVivants())
             {
                 _sortieEnCours = true;
                 _raisonSortie = "KILL";
@@ -241,6 +280,7 @@ public abstract class HybrideStrategyBase : Strategy
         lock (Verrou)
         {
             _dernierTradeVuUtc = DateTime.UtcNow;
+            if (ModeShadow) MoteurShadow(t, trade.Price);
             if (_barreEnCours is { } b)
             {
                 if (ouverture > b.OuvertureUtc)
@@ -271,6 +311,85 @@ public abstract class HybrideStrategyBase : Strategy
         }
     }
 
+    // ================================================================== MOTEUR SHADOW ==
+    /// <summary>Le cycle de vie SIMULÉ des ordres, au tick : fill d'entrée/sortie au trade
+    /// suivant l'envoi, bracket vérifié à chaque trade (SL prioritaire). Même vocabulaire
+    /// de journal que le réel ; ids « shadow-N ». AUCUN appel à l'API d'ordres ici.</summary>
+    private void MoteurShadow(DateTime tUtc, double prix)
+    {
+        // 1) Fill d'entrée simulé : le « market » se remplit au premier trade qui suit.
+        if (_shadowEntreeAttendue)
+        {
+            _shadowEntreeAttendue = false;
+            _shadowSens = _shadowSensAttendu == Side.Buy ? 1 : -1;
+            PrixEntree = prix;
+            SensPosition = _shadowSensAttendu;
+            double tick = Instrument!.TickSize;
+            _shadowStop = _shadowSens > 0 ? prix - _slTicksAttente * tick : prix + _slTicksAttente * tick;
+            _shadowTake = _tpTicksAttente > 0
+                ? (_shadowSens > 0 ? prix + _tpTicksAttente * tick : prix - _tpTicksAttente * tick)
+                : double.NaN;
+            StopCourantPlateforme = _shadowStop;
+            string id = $"shadow-{_shadowNumero.ToString(Inv)}";
+            Journal("fill", prix: prix, qte: _shadowSens * Contrats, idOrdre: id, raison: "fill d'entrée (simulé)");
+            var indic = new List<(string, double)>(_indicateursEntree) { ("stop", _shadowStop) };
+            if (!double.IsNaN(_shadowTake)) indic.Add(("take", _shadowTake));
+            Journal("bracket_pose", prix: prix, idOrdre: $"{id}-bracket",
+                    raison: $"bracket SIMULÉ au fill (SL {_slTicksAttente.ToString(Inv)} ticks"
+                          + (_tpTicksAttente > 0 ? $", TP {_tpTicksAttente.ToString(Inv)} ticks)" : ", pas de TP)"),
+                    indicateurs: indic.ToArray());
+            this.LogInfo($"SHADOW : position {SensPosition} @ {prix.ToString(Inv)} | stop {_shadowStop.ToString(Inv)}"
+                       + (double.IsNaN(_shadowTake) ? "" : $" | take {_shadowTake.ToString(Inv)}"));
+            SurPositionOuverte(prix);
+            return;
+        }
+
+        // 2) Fill de sortie signal/flat simulé.
+        if (_shadowSortieAttendue)
+        {
+            _shadowSortieAttendue = false;
+            FermerShadow(prix, _shadowRaisonSortie, pertePleine: false);
+            return;
+        }
+
+        // 3) Bracket simulé : SL prioritaire, puis TP — à CHAQUE trade (plus fin que le 1 m
+        // des jumeaux ; mêmes niveaux, donc mêmes décisions).
+        if (_shadowSens == 0) return;
+        if (!double.IsNaN(_shadowStop)
+            && ((_shadowSens > 0 && prix <= _shadowStop) || (_shadowSens < 0 && prix >= _shadowStop)))
+        {
+            bool perte = EstPertePleine("SL", _shadowStop);
+            Journal("fill", prix: _shadowStop, qte: -_shadowSens * Contrats,
+                    idOrdre: $"shadow-{_shadowNumero.ToString(Inv)}-sl", raison: "fill de sortie [SL] (simulé)");
+            FermerShadow(_shadowStop, "SL", perte);
+        }
+        else if (!double.IsNaN(_shadowTake)
+                 && ((_shadowSens > 0 && prix >= _shadowTake) || (_shadowSens < 0 && prix <= _shadowTake)))
+        {
+            Journal("fill", prix: _shadowTake, qte: -_shadowSens * Contrats,
+                    idOrdre: $"shadow-{_shadowNumero.ToString(Inv)}-tp", raison: "fill de sortie [TP] (simulé)");
+            FermerShadow(_shadowTake, "TP", pertePleine: false);
+        }
+    }
+
+    /// <summary>Clôture de la position simulée + garde-fou + hook fille.</summary>
+    private void FermerShadow(double prixSortie, string raison, bool pertePleine)
+    {
+        if (raison is "SIGNAL" or "FLAT" or "KILL")
+            Journal("fill", prix: prixSortie, qte: -_shadowSens * Contrats,
+                    idOrdre: $"shadow-{_shadowNumero.ToString(Inv)}",
+                    raison: $"fill de sortie [{raison}] (simulé)");
+        _shadowSens = 0;
+        _shadowStop = _shadowTake = double.NaN;
+        StopCourantPlateforme = double.NaN;
+        PrixEntree = double.NaN;
+        if (Cadre.Sortie(DateTime.UtcNow, pertePleine))
+            Journal("garde_fou",
+                    raison: $"{PertesMax.ToString(Inv)} pertes pleines — arrêt jusqu'à {EntreesDebutEt} ET");
+        this.LogInfo($"SHADOW : position fermée [{raison}]{(pertePleine ? " (perte pleine)" : "")} @ {prixSortie.ToString(Inv)}");
+        SurPositionFermee(raison);
+    }
+
     // ======================================================================== L'HORLOGE =
     private void TicHorloge()
     {
@@ -289,6 +408,20 @@ public abstract class HybrideStrategyBase : Strategy
                                + "les entrées sont bloquées de fait (pas de barre = pas de signal).");
 
                 // FLAT FORCÉ à l'horloge murale — indépendant des barres.
+                if (ModeShadow)
+                {
+                    if (minutes >= Cadre.FlatForce && (_shadowSens != 0 || _shadowEntreeAttendue))
+                    {
+                        _shadowEntreeAttendue = false;
+                        _shadowSortieAttendue = false;
+                        string id = $"shadow-{_shadowNumero.ToString(Inv)}";
+                        Journal("annulation", idOrdre: $"{id}-bracket", raison: "flat forcé : bracket annulé (simulé)");
+                        Journal("flat_force", prix: DernierClose,
+                                raison: $"flat forcé {HeureFlatEt} ET (simulé, au dernier prix connu)");
+                        if (_shadowSens != 0) FermerShadow(DernierClose, "FLAT", pertePleine: false);
+                    }
+                    return;
+                }
                 if (minutes >= Cadre.FlatForce && !_sortieEnCours
                     && (PositionCourante is not null || DesOrdresVivants()))
                 {
@@ -316,7 +449,7 @@ public abstract class HybrideStrategyBase : Strategy
             return $"hors fenêtre d'entrée ({EntreesDebutEt}-{EntreesFinEt} ET)";
         if (Cadre.GardeFou) return "garde-fou journalier actif";
         if (!Cadre.CooldownOk(finBarreUtc)) return $"cooldown {CooldownMin.ToString(Inv)} min";
-        if (PositionCourante is not null || _entreeEnCours || _sortieEnCours) return "déjà en position";
+        if (EnPosition || _entreeEnCours || _shadowEntreeAttendue || SortieEnCours) return "déjà en position";
         return null;
     }
 
@@ -326,10 +459,24 @@ public abstract class HybrideStrategyBase : Strategy
                                  int slTicks, int tpTicks,
                                  (string cle, double valeur)[] indicateurs)
     {
-        if (_enSeed || Instrument is null || Compte is null) return;
+        if (_enSeed || Instrument is null) return;
         _slTicksAttente = slTicks;
         _tpTicksAttente = tpTicks;
         _indicateursEntree = indicateurs;
+
+        if (ModeShadow)
+        {
+            _shadowNumero++;
+            _shadowEntreeAttendue = true;
+            _shadowSensAttendu = sens;
+            SensPosition = sens;
+            Journal("entree_envoyee", prix: prixDecision, qte: sens == Side.Buy ? Contrats : -Contrats,
+                    idOrdre: $"shadow-{_shadowNumero.ToString(Inv)}",
+                    raison: $"market ×{Contrats.ToString(Inv)} SIMULÉ + SL {slTicks.ToString(Inv)} ticks"
+                          + (tpTicks > 0 ? $" / TP {tpTicks.ToString(Inv)} ticks" : " (pas de TP)"));
+            return;
+        }
+        if (Compte is null) return;
 
         var requete = new PlaceOrderRequestParameters
         {
@@ -365,6 +512,19 @@ public abstract class HybrideStrategyBase : Strategy
     /// ordre) puis ferme la position au market. Le fill arrivera par TradeAdded.</summary>
     protected void EnvoyerSortieSignal(DateTime tsUtc, string raisonTexte)
     {
+        if (ModeShadow)
+        {
+            if (_shadowSens == 0 || _shadowSortieAttendue) return;
+            string id = $"shadow-{_shadowNumero.ToString(Inv)}";
+            Journal("annulation", idOrdre: $"{id}-bracket", raison: $"sortie signal : bracket annulé ({raisonTexte}) (simulé)");
+            _shadowStop = _shadowTake = double.NaN;          // le bracket simulé meurt ICI
+            StopCourantPlateforme = double.NaN;
+            Journal("sortie_envoyee", prix: DernierClose, qte: -_shadowSens * Contrats,
+                    idOrdre: id, raison: $"{raisonTexte} (simulé)");
+            _shadowSortieAttendue = true;
+            _shadowRaisonSortie = "SIGNAL";
+            return;
+        }
         var p = PositionCourante;
         if (p is null || _sortieEnCours) return;
         _sortieEnCours = true;
@@ -385,6 +545,16 @@ public abstract class HybrideStrategyBase : Strategy
     protected bool ModifierStop(DateTime tsUtc, double nouveauPrix,
                                 (string cle, double valeur)[] indicateurs)
     {
+        if (ModeShadow)
+        {
+            if (_shadowSens == 0) return false;
+            _shadowStop = nouveauPrix;
+            StopCourantPlateforme = nouveauPrix;
+            Journal("stop_modifie", prix: nouveauPrix,
+                    idOrdre: $"shadow-{_shadowNumero.ToString(Inv)}-sl",
+                    raison: "suiveur (simulé)", indicateurs: indicateurs);
+            return true;
+        }
         ResoudreOrdresLies();
         var ordre = TrouverOrdre(_idOrdreSl);
         if (ordre is null)
@@ -433,7 +603,7 @@ public abstract class HybrideStrategyBase : Strategy
                           + (_tpTicksAttente > 0 ? $", TP {_tpTicksAttente.ToString(Inv)} ticks)" : ", pas de TP)"),
                     indicateurs: indic.ToArray());
             this.LogInfo($"POSITION ouverte {p.Side} @ {p.OpenPrice.ToString(Inv)} (id {p.Id})");
-            SurPositionOuverte(p);
+            SurPositionOuverte(p.OpenPrice);
         }
     }
 

@@ -120,9 +120,9 @@ public sealed class SmaSuiveurHybride : HybrideStrategyBase
         EnvoyerEntree(b5.FinUtc, croiseHaut ? Side.Buy : Side.Sell, b5.C, slTicks, 0, indicateurs);
     }
 
-    protected override void SurPositionOuverte(Position p)
+    protected override void SurPositionOuverte(double prixEntree)
     {
-        _extreme = p.OpenPrice;      // l'extrême favorable démarre au fill, comme le jumeau
+        _extreme = prixEntree;       // l'extrême favorable démarre au fill, comme le jumeau
         _stopVoulu = double.NaN;     // référence = stop réellement posé (StopCourantPlateforme)
     }
 

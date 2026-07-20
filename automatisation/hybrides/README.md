@@ -15,11 +15,28 @@
 | `RsiBracketHybride` | Hybride H3 RSI Bracket (NQ) | l'**annulation** du bracket (RSI 50) | `rsi_bracket_nq.py` |
 | `OrdresProbe` | Ordres Probe (SIM) | le cycle de vie des ordres (étude §9) | — |
 
+## Mode SHADOW — la voie par défaut (2026-07-20)
+
+L'essai 7 jours du Simulator est **mort** (déjà consommé), et **Apex interdit les bots**
+(dixit l'utilisateur — donc ni les hybrides ni la sonde logicielle sur ce compte). La voie
+retenue : **« Mode SHADOW (décisions journalisées, ZÉRO ordre) », coché par défaut** —
+c'est la phase 4 du plan, gratuite, lançable tout de suite :
+
+- La stratégie tourne sur le flux réel, décide, et SIMULE le cycle de vie des ordres **au
+  tick** (fill au trade suivant, bracket vérifié à chaque trade, suiveur, annulations) —
+  le moteur des jumeaux LEAN porté au live. AUCUN appel à l'API d'ordres, aucun compte
+  requis (le paramètre Compte est ignoré).
+- Journal NDJSON identique (ids `shadow-N`) → comparable aux jumeaux, jour par jour.
+- La mécanique d'ordres RÉELLE se prouvera soit à la main sur Apex
+  ([`../docs/sonde-manuelle-apex.md`](../docs/sonde-manuelle-apex.md)), soit via l'achat
+  du Simulator (pack Advanced Features / All-in-One — décision de coût utilisateur) ; la
+  sonde logicielle « Ordres Probe (SIM) » reste prête pour ce jour-là.
+
 ## Sécurité — les garde-fous d'abord
 
-- **Garde anti-compte-réel** : les 3 stratégies REFUSENT de démarrer si la connexion du
-  compte n'est pas `TradingSimulator`, sauf si « Autoriser un compte réel (phase 5) » est
-  coché. **La sonde, elle, n'a AUCUN paramètre d'évasion** (codé en dur).
+- **Garde anti-compte-réel** (hors shadow) : les 3 stratégies REFUSENT de démarrer si la
+  connexion du compte n'est pas `TradingSimulator`, sauf si « Autoriser un compte réel
+  (phase 5) » est coché. **La sonde, elle, n'a AUCUN paramètre d'évasion** (codé en dur).
 - **Kill switch** = arrêter la stratégie (bouton Stop) : tout annuler + liquider
   (`Flatten`), journalisé `kill`.
 - **Flat forcé sur horloge murale** (timer 10 s), PAS sur les barres : un marché muet à
@@ -72,10 +89,14 @@ powershell -ExecutionPolicy Bypass -File deploy.ps1
 # -> C:\Quantower\Settings\Scripts\Strategies\Hybrides ; REDÉMARRER Quantower (piège 5).
 ```
 
-Séquence du POC (décisions user du 2026-07-19) : **tout préparer AVANT d'activer l'essai
-7 jours** (le compteur part au premier jour). Puis : panneau Trading Simulator ouvert
-(⚠ compte NEUF à chaque ouverture du panneau), panneau Strategies → choisir symbole NQ +
-compte Simulator → Run. Dérouler d'abord la sonde, puis les 3 hybrides en séance.
+**Lancer en SHADOW (maintenant, gratuit)** : panneau Strategies → une hybride → symbole
+NQ front → « Mode SHADOW » coché (défaut) → Run. Compte inutile. Laisser rouler les
+séances ; les journaux s'écrivent dans `H:\IndicesBoursiers\automatisation\journaux\`.
+
+**Si le Simulator est acheté un jour** (⚠ l'essai 7 jours est mort — pack Advanced
+Features ou All-in-One, garantie 10 j) : panneau Trading Simulator ouvert (⚠ compte NEUF
+à chaque ouverture), décocher le mode shadow, choisir le compte Simulator → dérouler
+d'abord la sonde, puis les 3 hybrides en séance.
 
 ### Procédure manuelle « où vit le stop » (pendant l'étape A de la sonde)
 
