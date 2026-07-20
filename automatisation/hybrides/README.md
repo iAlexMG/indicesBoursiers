@@ -15,22 +15,31 @@
 | `RsiBracketHybride` | Hybride H3 RSI Bracket (NQ) | l'**annulation** du bracket (RSI 50) | `rsi_bracket_nq.py` |
 | `OrdresProbe` | Ordres Probe (SIM) | le cycle de vie des ordres (étude §9) | — |
 
-## Mode SHADOW — la voie par défaut (2026-07-20)
+## Les TROIS modes d'exécution (paramètre « Mode d'exécution »)
 
-L'essai 7 jours du Simulator est **mort** (déjà consommé), et **Apex interdit les bots**
-(dixit l'utilisateur — donc ni les hybrides ni la sonde logicielle sur ce compte). La voie
-retenue : **« Mode SHADOW (décisions journalisées, ZÉRO ordre) », coché par défaut** —
-c'est la phase 4 du plan, gratuite, lançable tout de suite :
+Contexte (2026-07-20) : l'essai 7 jours du Simulator est **mort** (déjà consommé), et
+**Apex interdit les bots** — mais permet le trading où c'est l'HUMAIN qui initie chaque
+transaction (dixit l'utilisateur, source d'autorité sur ses règles).
 
-- La stratégie tourne sur le flux réel, décide, et SIMULE le cycle de vie des ordres **au
-  tick** (fill au trade suivant, bracket vérifié à chaque trade, suiveur, annulations) —
-  le moteur des jumeaux LEAN porté au live. AUCUN appel à l'API d'ordres, aucun compte
-  requis (le paramètre Compte est ignoré).
-- Journal NDJSON identique (ids `shadow-N`) → comparable aux jumeaux, jour par jour.
-- La mécanique d'ordres RÉELLE se prouvera soit à la main sur Apex
-  ([`../docs/sonde-manuelle-apex.md`](../docs/sonde-manuelle-apex.md)), soit via l'achat
-  du Simulator (pack Advanced Features / All-in-One — décision de coût utilisateur) ; la
-  sonde logicielle « Ordres Probe (SIM) » reste prête pour ce jour-là.
+1. **SHADOW (défaut)** — la phase 4 : la stratégie décide et SIMULE le cycle de vie des
+   ordres **au tick** (fill au trade suivant, bracket à chaque trade, suiveur,
+   annulations) — le moteur des jumeaux LEAN porté au live. AUCUN appel à l'API d'ordres,
+   aucun compte requis. Journal ids `shadow-N`.
+2. **CONFIRMATION** — le semi-automatisé, l'humain dans la boucle : chaque geste (entrée,
+   modification du suiveur, sortie signal, flat) est **PROPOSÉ par un pop-up Alert**
+   (`Utils.Alert.ActionOnConfirm`, mesuré) — **rien ne part sans le clic**. Confirmer =
+   accepter ; ignorer = refus (expiration paramétrable, défaut 120 s ; journal ids
+   `prop-N`). Une proposition à la fois, la plus récente remplace. Détails de prudence :
+   le suiveur n'est JAMAIS appliqué seul (refusé = le stop reste, toujours protecteur) ;
+   le flat de fin de séance est un pop-up INSISTANT (rappel chaque minute), jamais un
+   ordre auto ; le bouton Stop (un clic humain) déclenche, lui, le Flatten du kill switch.
+   Sur compte réel, la case « Autoriser un compte réel » reste un DEUXIÈME consentement.
+3. **AUTO** — ordres directs sans confirmation : Trading Simulator (s'il est acheté un
+   jour — pack Advanced Features / All-in-One, garantie 10 j) ou phase 5. La sonde
+   logicielle « Ordres Probe (SIM) » reste prête pour ce cas.
+
+La checklist mécanique peut aussi se dérouler À LA MAIN
+([`../docs/sonde-manuelle-apex.md`](../docs/sonde-manuelle-apex.md)).
 
 ## Sécurité — les garde-fous d'abord
 
@@ -108,6 +117,10 @@ d'abord la sonde, puis les 3 hybrides en séance.
 
 ## À SONDER (ce que la compile ne prouve pas — la sonde et la 1re séance trancheront)
 
+0. **Le pop-up de CONFIRMATION** : le rendu du `Utils.Alert` se vérifie sans risque (laisser
+   une proposition EXPIRER = prouve l'affichage et le journal) ; le déclenchement de
+   `ActionOnConfirm` au clic, lui, ne se prouve qu'en ACCEPTANT — faire ce premier essai
+   sur **MNQ ×1** (2 $/pt), bracket attaché, en surveillant.
 1. `SlTpHolder` en `Offset` = ticks depuis le fill (sémantique attendue ; étape A vérifie
    « SL posé à ~20 ticks »).
 2. Le sort du bracket après `Position.Close()` (attendu : annulé ; étape A3 le mesure).

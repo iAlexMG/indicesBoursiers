@@ -1,5 +1,27 @@
 # Journal du projet — décisions datées & mesures clés
 
+## 2026-07-20 (nuit) — MODE CONFIRMATION : le semi-automatisé, l'humain dans la boucle
+
+**Décision utilisateur** : sur Apex, remplacer les ordres automatiques par des
+**propositions à accepter/refuser** — le logiciel signale, l'HUMAIN initie chaque
+transaction (semi-automatisé ; l'utilisateur, source d'autorité sur ses règles, confirme
+que c'est acceptable — c'est d'ailleurs la formulation d'origine de la phase 5, « ordres
+réels semi-automatisés »). **Implémenté le soir même** : le booléen shadow devient un
+**sélecteur à 3 modes** (`variants` d'InputParameter, mesuré) —
+**SHADOW** (défaut, inchangé) · **CONFIRMATION** · **AUTO** (Simulator/phase 5).
+Mode CONFIRMATION : chaque geste (entrée, modification du suiveur, sortie signal, flat)
+est proposé par un **pop-up `Utils.Alert` avec `ActionOnConfirm`** (bouton mesuré dans le
+dump) — rien ne part sans le clic ; ignorer = refus (expiration paramétrable, 120 s) ;
+UNE proposition à la fois, la plus récente remplace ; re-validation du cadre À l'instant
+du clic (le clic peut arriver 2 min après le signal). Prudences : le **suiveur n'est
+jamais appliqué seul** (refusé = le stop reste, toujours protecteur) ; le **flat de fin
+de séance = pop-up insistant** (rappel/minute), jamais d'ordre auto ; le bouton Stop (un
+clic humain) garde son Flatten. La case « Autoriser un compte réel » reste un DEUXIÈME
+consentement explicite. Journal : événement `proposition` (ids `prop-N`) ajouté au
+vocabulaire (comme `demarrage`/`arret`). Compile 0/0, DLL redéployée.
+**À VALIDER en 1er à l'usage** : le rendu du pop-up et le déclenchement du clic
+(README §À sonder, point 0 — premier essai en MNQ ×1).
+
 ## 2026-07-20 (soir) — ⛔ Essai 7 j MORT → pivot MODE SHADOW (défaut) + sonde manuelle Apex
 
 Constat utilisateur : l'essai 7 jours du Trading Simulator est « terminé » (déjà consommé)

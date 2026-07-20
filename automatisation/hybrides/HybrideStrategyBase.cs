@@ -36,15 +36,30 @@ public abstract class HybrideStrategyBase : Strategy
     [InputParameter("Compte (inutile en shadow ; Trading Simulator sinon)", 1)]
     public Account? Compte { get; set; }
 
-    // MODE SHADOW = la phase 4 du plan : la stratégie décide et journalise, mais ne place
-    // AUCUN ordre — les brackets sont SIMULÉS au tick (patron des jumeaux LEAN, porté au
-    // flux réel). C'est la voie retenue le 2026-07-20 (essai Simulator mort, et les règles
-    // Apex interdisent les bots — dixit l'utilisateur, source d'autorité sur son compte).
-    [InputParameter("Mode SHADOW (décisions journalisées, ZÉRO ordre)", 2)]
-    public bool ModeShadow = true;
+    // Les TROIS modes d'exécution (décisions user des 2026-07-19/20) :
+    //   SHADOW (défaut)  — phase 4 : décisions + journal, ordres SIMULÉS au tick, zéro API.
+    //   CONFIRMATION     — semi-automatisé, l'HUMAIN dans la boucle : chaque ordre (entrée,
+    //     modification du suiveur, sortie signal, flat) est PROPOSÉ par un pop-up Alert
+    //     (bouton de confirmation mesuré : Utils.Alert.ActionOnConfirm) ; rien ne part sans
+    //     le clic de l'utilisateur — c'est LUI qui initie chaque transaction. Compatible
+    //     avec l'interdit Apex des bots (dixit l'utilisateur, source d'autorité sur ses
+    //     règles) ; la case « compte réel » reste un DEUXIÈME consentement explicite.
+    //   AUTO             — ordres directs sans confirmation : Trading Simulator (ou phase 5).
+    [InputParameter("Mode d'exécution", 2, variants: new object[] {
+        "SHADOW — journal seulement, ZÉRO ordre", ModeShadowV,
+        "CONFIRMATION — pop-up, l'utilisateur accepte chaque ordre", ModeConfirmationV,
+        "AUTO — ordres directs (Simulator / phase 5)", ModeAutoV })]
+    public int Mode = ModeShadowV;
 
-    [InputParameter("Autoriser un compte réel (phase 5 SEULEMENT)", 11)]
+    public const int ModeShadowV = 0, ModeConfirmationV = 1, ModeAutoV = 2;
+    protected bool EnShadow => Mode == ModeShadowV;
+    protected bool EnConfirmation => Mode == ModeConfirmationV;
+
+    [InputParameter("Autoriser un compte réel (CONFIRMATION recommandé ; AUTO = phase 5)", 11)]
     public bool AutoriserCompteReel = false;
+
+    [InputParameter("Validité d'une proposition (secondes, mode CONFIRMATION)", 12, 10, 600, 5, 0)]
+    public int PropositionValiditeS = 120;
 
     [InputParameter("Contrats", 3, 1, 10, 1, 0)]
     public int Contrats = 1;
@@ -123,6 +138,13 @@ public abstract class HybrideStrategyBase : Strategy
     private string _shadowRaisonSortie = "";
     private int _shadowNumero;                    // ids shadow-N / shadow-N-bracket
 
+    // --- Propositions du mode CONFIRMATION (pop-up Alert + ActionOnConfirm) -------------
+    private int _propNumero;                      // ids prop-N (journal)
+    private int _propActive;                      // proposition en cours (0 = aucune)
+    private DateTime _propExpireUtc;
+    private Action? _propGeste;                   // le geste RÉEL, exécuté au clic seulement
+    private DateTime _propDernierRappelUtc = DateTime.MinValue;   // cadence du rappel de flat
+
     protected bool EnPosition => PositionCourante is not null || _shadowSens != 0;
     protected bool SortieEnCours => _sortieEnCours || _shadowSortieAttendue;
 
@@ -152,7 +174,7 @@ public abstract class HybrideStrategyBase : Strategy
         }
 
         string etiquetteCompte;
-        if (ModeShadow)
+        if (EnShadow)
         {
             // SHADOW : zéro ordre, donc zéro compte — le paramètre Compte est IGNORÉ même
             // s'il est rempli (aucun chemin de code ne le touche).
@@ -184,7 +206,7 @@ public abstract class HybrideStrategyBase : Strategy
                 return;
             }
             _idTypeMarket = market.Id;
-            etiquetteCompte = $"{Compte.Name} ({typeConn})";
+            etiquetteCompte = (EnConfirmation ? "CONFIRMATION @ " : "AUTO @ ") + $"{Compte.Name} ({typeConn})";
         }
 
         Cadre = new CadreSeance(EntreesDebutEt, EntreesFinEt, HeureFlatEt, PertesMax, CooldownMin);
@@ -245,7 +267,7 @@ public abstract class HybrideStrategyBase : Strategy
         // KILL SWITCH (spec) : l'arrêt de la stratégie = tout annuler + liquider.
         lock (Verrou)
         {
-            if (ModeShadow)
+            if (EnShadow)
             {
                 if (_shadowSens != 0 || _shadowEntreeAttendue)
                 {
@@ -280,7 +302,7 @@ public abstract class HybrideStrategyBase : Strategy
         lock (Verrou)
         {
             _dernierTradeVuUtc = DateTime.UtcNow;
-            if (ModeShadow) MoteurShadow(t, trade.Price);
+            if (EnShadow) MoteurShadow(t, trade.Price);
             if (_barreEnCours is { } b)
             {
                 if (ouverture > b.OuvertureUtc)
@@ -390,6 +412,68 @@ public abstract class HybrideStrategyBase : Strategy
         SurPositionFermee(raison);
     }
 
+    // =========================================================== MOTEUR DE CONFIRMATION =
+    /// <summary>Mode CONFIRMATION : PROPOSE un geste par pop-up (Utils.Alert, bouton de
+    /// confirmation). Le geste réel ne part QUE si l'utilisateur clique — c'est LUI qui
+    /// initie chaque transaction. UNE proposition à la fois : la plus récente remplace
+    /// l'ancienne ; ignorer = refus (expiration). Tout est journalisé (ids prop-N).</summary>
+    private void Proposer(string titre, string texte, Action gesteReel)
+    {
+        if (_propActive != 0)
+            Journal("annulation", idOrdre: $"prop-{_propActive.ToString(Inv)}",
+                    raison: "proposition remplacée par une plus récente");
+        _propNumero++;
+        int id = _propNumero;
+        _propActive = id;
+        _propExpireUtc = DateTime.UtcNow.AddSeconds(PropositionValiditeS);
+        _propGeste = gesteReel;
+        Journal("proposition", prix: DernierClose, idOrdre: $"prop-{id.ToString(Inv)}",
+                raison: $"{titre} — {texte} (valide {PropositionValiditeS.ToString(Inv)} s)");
+        Core.Instance.Alert(new TradingPlatform.BusinessLayer.Utils.Alert
+        {
+            Name = titre,
+            Text = $"{texte} — CONFIRMER = accepter ; ignorer = refuser "
+                 + $"(expire dans {PropositionValiditeS.ToString(Inv)} s).",
+            SymbolName = Instrument?.Name ?? "",
+            ConnectionName = Compte?.Connection?.Name ?? "",
+            AutoOpenAlertsLog = true,
+            ActionOnConfirm = () => Confirmer(id),
+        });
+        this.LogInfo($"PROPOSITION #{id.ToString(Inv)} : {titre} — {texte}");
+    }
+
+    private void Confirmer(int id)
+    {
+        try
+        {
+            lock (Verrou)
+            {
+                if (id != _propActive)
+                {
+                    Journal("annulation", idOrdre: $"prop-{id.ToString(Inv)}",
+                            raison: "confirmation reçue APRÈS expiration/remplacement — ignorée");
+                    return;
+                }
+                var geste = _propGeste;
+                _propActive = 0;
+                _propGeste = null;
+                Journal("proposition", idOrdre: $"prop-{id.ToString(Inv)}",
+                        raison: "ACCEPTÉE par l'utilisateur (clic)");
+                geste?.Invoke();
+            }
+        }
+        catch (Exception ex) { this.LogError($"Confirmation : {ex}"); }
+    }
+
+    private void ExpirerProposition()
+    {
+        if (_propActive == 0 || DateTime.UtcNow < _propExpireUtc) return;
+        Journal("annulation", idOrdre: $"prop-{_propActive.ToString(Inv)}",
+                raison: $"proposition expirée sans réponse ({PropositionValiditeS.ToString(Inv)} s) — refus implicite");
+        _propActive = 0;
+        _propGeste = null;
+    }
+
     // ======================================================================== L'HORLOGE =
     private void TicHorloge()
     {
@@ -407,8 +491,10 @@ public abstract class HybrideStrategyBase : Strategy
                     this.LogInfo("⚠️ Aucun trade reçu depuis > 5 min en pleine séance : flux suspect, "
                                + "les entrées sont bloquées de fait (pas de barre = pas de signal).");
 
+                ExpirerProposition();
+
                 // FLAT FORCÉ à l'horloge murale — indépendant des barres.
-                if (ModeShadow)
+                if (EnShadow)
                 {
                     if (minutes >= Cadre.FlatForce && (_shadowSens != 0 || _shadowEntreeAttendue))
                     {
@@ -422,20 +508,40 @@ public abstract class HybrideStrategyBase : Strategy
                     }
                     return;
                 }
-                if (minutes >= Cadre.FlatForce && !_sortieEnCours
-                    && (PositionCourante is not null || DesOrdresVivants()))
+                if (minutes < Cadre.FlatForce || _sortieEnCours
+                    || (PositionCourante is null && !DesOrdresVivants()))
+                    return;
+                if (EnConfirmation)
                 {
-                    Journal("annulation", idOrdre: IdBracket(), raison: "flat forcé : bracket annulé");
-                    _sortieEnCours = true;
-                    _raisonSortie = "FLAT";
-                    Journal("flat_force", prix: DernierClose,
-                            raison: $"flat forcé {HeureFlatEt} ET : tout annuler + liquider");
-                    var r = Core.Instance.AdvancedTradingOperations.Flatten(Instrument, Compte, null);
-                    if (r is not null) this.LogInfo($"Flat forcé : Flatten → {r}");
+                    // Jamais d'ordre sans clic, même pour le flat : pop-up INSISTANT
+                    // (répété chaque minute tant que la position vit). L'utilisateur
+                    // garde la main — et la responsabilité — du flat de fin de séance.
+                    if ((DateTime.UtcNow - _propDernierRappelUtc).TotalSeconds >= 60)
+                    {
+                        _propDernierRappelUtc = DateTime.UtcNow;
+                        Proposer($"{Name} : FLAT FORCÉ {HeureFlatEt} ET ?",
+                                 "tout annuler + liquider MAINTENANT (rappel chaque minute)",
+                                 FlatReel);
+                    }
+                    return;
                 }
+                FlatReel();
             }
         }
         catch (Exception ex) { this.LogError($"Horloge : {ex.Message}"); }
+    }
+
+    /// <summary>Le geste RÉEL du flat forcé : tout annuler + liquider (mécanisme n°4).</summary>
+    private void FlatReel()
+    {
+        if (_sortieEnCours || (PositionCourante is null && !DesOrdresVivants())) return;
+        Journal("annulation", idOrdre: IdBracket(), raison: "flat forcé : bracket annulé");
+        _sortieEnCours = true;
+        _raisonSortie = "FLAT";
+        Journal("flat_force", prix: DernierClose,
+                raison: $"flat forcé {HeureFlatEt} ET : tout annuler + liquider");
+        var r = Core.Instance.AdvancedTradingOperations.Flatten(Instrument, Compte, null);
+        if (r is not null) this.LogInfo($"Flat forcé : Flatten → {r}");
     }
 
     // ============================================================= HELPERS DE DÉCISION =
@@ -464,7 +570,7 @@ public abstract class HybrideStrategyBase : Strategy
         _tpTicksAttente = tpTicks;
         _indicateursEntree = indicateurs;
 
-        if (ModeShadow)
+        if (EnShadow)
         {
             _shadowNumero++;
             _shadowEntreeAttendue = true;
@@ -477,6 +583,29 @@ public abstract class HybrideStrategyBase : Strategy
             return;
         }
         if (Compte is null) return;
+        if (EnConfirmation)
+        {
+            string sensTxt = sens == Side.Buy ? "LONG" : "SHORT";
+            Proposer($"{Name} : ENTRÉE {sensTxt} ?",
+                     $"market ×{Contrats.ToString(Inv)} @ ~{prixDecision.ToString(Inv)} + SL {slTicks.ToString(Inv)} ticks"
+                   + (tpTicks > 0 ? $" / TP {tpTicks.ToString(Inv)} ticks" : " (pas de TP)"),
+                     () => EntreeReelle(sens, prixDecision, slTicks, tpTicks));
+            return;
+        }
+        EntreeReelle(sens, prixDecision, slTicks, tpTicks);
+    }
+
+    /// <summary>Le geste RÉEL d'entrée (AUTO : direct ; CONFIRMATION : au clic). Re-valide
+    /// le cadre à l'instant de l'exécution — le clic peut arriver 2 minutes après le signal.</summary>
+    private void EntreeReelle(Side sens, double prixDecision, int slTicks, int tpTicks)
+    {
+        var refus = RaisonRefus(DateTime.UtcNow);
+        if (refus is not null)
+        {
+            Journal("annulation", raison: $"entrée non exécutée : {refus}");
+            this.LogInfo($"Entrée refusée à l'exécution : {refus}");
+            return;
+        }
 
         var requete = new PlaceOrderRequestParameters
         {
@@ -512,7 +641,7 @@ public abstract class HybrideStrategyBase : Strategy
     /// ordre) puis ferme la position au market. Le fill arrivera par TradeAdded.</summary>
     protected void EnvoyerSortieSignal(DateTime tsUtc, string raisonTexte)
     {
-        if (ModeShadow)
+        if (EnShadow)
         {
             if (_shadowSens == 0 || _shadowSortieAttendue) return;
             string id = $"shadow-{_shadowNumero.ToString(Inv)}";
@@ -525,8 +654,26 @@ public abstract class HybrideStrategyBase : Strategy
             _shadowRaisonSortie = "SIGNAL";
             return;
         }
+        if (EnConfirmation)
+        {
+            if (PositionCourante is null || _sortieEnCours) return;
+            Proposer($"{Name} : SORTIE ?",
+                     $"{raisonTexte} — annuler le bracket + fermer au market",
+                     () => SortieSignalReelle(raisonTexte));
+            return;
+        }
+        SortieSignalReelle(raisonTexte);
+    }
+
+    /// <summary>Le geste RÉEL de sortie signal (annulation du bracket + close).</summary>
+    private void SortieSignalReelle(string raisonTexte)
+    {
         var p = PositionCourante;
-        if (p is null || _sortieEnCours) return;
+        if (p is null || _sortieEnCours)
+        {
+            Journal("annulation", raison: $"sortie non exécutée ({raisonTexte}) : position déjà fermée");
+            return;
+        }
         _sortieEnCours = true;
         _raisonSortie = "SIGNAL";
         Journal("annulation", idOrdre: IdBracket(), raison: $"sortie signal : bracket annulé ({raisonTexte})");
@@ -545,7 +692,7 @@ public abstract class HybrideStrategyBase : Strategy
     protected bool ModifierStop(DateTime tsUtc, double nouveauPrix,
                                 (string cle, double valeur)[] indicateurs)
     {
-        if (ModeShadow)
+        if (EnShadow)
         {
             if (_shadowSens == 0) return false;
             _shadowStop = nouveauPrix;
@@ -554,6 +701,28 @@ public abstract class HybrideStrategyBase : Strategy
                     idOrdre: $"shadow-{_shadowNumero.ToString(Inv)}-sl",
                     raison: "suiveur (simulé)", indicateurs: indicateurs);
             return true;
+        }
+        if (EnConfirmation)
+        {
+            if (PositionCourante is null) return false;
+            // Proposé, jamais appliqué seul : refuser/ignorer = le stop RESTE où il est
+            // (toujours protecteur). La fille re-proposera un candidat frais à la
+            // prochaine barre de signal — la proposition la plus récente remplace.
+            Proposer($"{Name} : REMONTER LE STOP ?",
+                     $"stop suiveur -> {nouveauPrix.ToString(Inv)}",
+                     () => ModifStopReelle(nouveauPrix, indicateurs));
+            return false;
+        }
+        return ModifStopReelle(nouveauPrix, indicateurs);
+    }
+
+    /// <summary>Le geste RÉEL de modification du stop (mécanisme n°2 des specs).</summary>
+    private bool ModifStopReelle(double nouveauPrix, (string cle, double valeur)[] indicateurs)
+    {
+        if (PositionCourante is null)
+        {
+            Journal("annulation", raison: "modification de stop non exécutée : position déjà fermée");
+            return false;
         }
         ResoudreOrdresLies();
         var ordre = TrouverOrdre(_idOrdreSl);
