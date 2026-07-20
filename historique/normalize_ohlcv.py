@@ -16,7 +16,9 @@ Règle de fusion : à horodatage égal, la ligne issue des TICKS gagne (plus ric
 ⚠️ À la frontière de couverture, le premier bucket 4H/D tick peut être partiel
 (ticks démarrant en cours de bucket) : erreur bornée à 1 bucket par pas de temps.
 
-Produit H:\\IndicesBoursiers\\historique\\ohlcv\\<dir>\\{1H,4H,D}.csv.
+Produit H:\\IndicesBoursiers\\historique\\ohlcv\\<dir>\\{1m,1H,4H,D}.csv.
+Le pas 1m est un passage direct des barres minute (chaque barre = son bucket) —
+c'est le CSV que consomment les backtests LEAN 1 m (miroir du 1m.csv du frère crypto).
 
 Exemples :
   python normalize_ohlcv.py --dir H:\\IndicesBoursiers\\historique\\ohlcv\\NQ-2026-09 --prefix NQ-CME
@@ -30,9 +32,10 @@ import datetime as dt
 import os
 import sqlite3
 
-TFS = ["1H", "4H", "D"]
+TFS = ["1m", "1H", "4H", "D"]
+MINUTE_MS = 60_000
 HOUR_MS = 3_600_000
-TF_MS = {"1H": HOUR_MS, "4H": 4 * HOUR_MS, "D": 24 * HOUR_MS}
+TF_MS = {"1m": MINUTE_MS, "1H": HOUR_MS, "4H": 4 * HOUR_MS, "D": 24 * HOUR_MS}
 
 
 def iso_utc(ts_ms: int) -> str:

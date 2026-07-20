@@ -16,19 +16,303 @@
         "en": "The same eight strategies, the same engine, a different asset: what changes comes from the market, not the code."
       },
       "intro": {
-        "fr": "Les huit stratégies backtestées sur BTCUSDT, rejouées telles quelles sur les futures NQ avec le moteur LEAN. Mêmes règles, mêmes garde-fous de causalité ; seul l'instrument change — et c'est précisément ce qu'on veut mesurer.",
-        "en": "The eight strategies backtested on BTCUSDT, replayed as-is on the NQ futures with the LEAN engine. Same rules, same causality safeguards; only the instrument changes — and that's exactly what we want to measure."
+        "fr": "Les huit stratégies du banc crypto, rejouées sur les futures NQ en barres d'une minute (signaux multi-échelles 1 m–15 m), sur la même fenêtre que le frère — du 1er juin au 10 juillet 2026 —, commission fixe par contrat, capital de 100 000 $, long et short. Chacune est ensuite jugée hors échantillon : le début de la fenêtre prédit-il la fin ?",
+        "en": "The eight strategies from the crypto bench, replayed on NQ futures in one-minute bars (multi-scale 1m–15m signals), over the same window as the sibling — June 1 to July 10, 2026 —, fixed commission per contract, $100,000 of capital, long and short. Each is then judged out-of-sample: does the start of the window predict the end?"
       },
       "statut": {
-        "fr": "8 stratégies portées",
-        "en": "8 strategies ported"
+        "fr": "8 stratégies en 1 m",
+        "en": "8 strategies at 1m"
       },
       "renvois": ["walk-forward", "volume-profile"],
       "noteResultats": true,
+      "sousHub": true,
+      "cartesEnTete": true,
+      "carteCentre": {
+        "fr": "NQ 1 m",
+        "en": "NQ 1m"
+      },
+      "familles": [
+        {"id": "reference", "titre": {"fr": "Référence", "en": "Benchmark"}, "liaison": {"fr": "le plancher à battre", "en": "the floor to beat"}},
+        {"id": "tendance", "titre": {"fr": "Suivi de tendance", "en": "Trend following"}, "liaison": {"fr": "suivre le marché", "en": "follow the market"}},
+        {"id": "retour", "titre": {"fr": "Retour à la moyenne", "en": "Mean reversion"}, "liaison": {"fr": "parier contre l'excès", "en": "bet against the excess"}},
+        {"id": "risque", "titre": {"fr": "Gestion du risque", "en": "Risk management"}, "liaison": {"fr": "encadrer le signal", "en": "frame the signal"}},
+        {"id": "composite", "titre": {"fr": "Composite", "en": "Composite"}, "liaison": {"fr": "tout assembler", "en": "put it all together"}},
+        {"id": "volume", "titre": {"fr": "Order-flow", "en": "Order-flow"}, "liaison": {"fr": "lire les ticks", "en": "read the ticks"}}
+      ],
       "items": [],
       "texte": {
-        "fr": "## Ce qui change, et ce qui ne change pas\n\nLes stratégies restent identiques au frère crypto — pas une ligne de logique réécrite. Tout ce qui diffère du monde crypto est isolé dans un seul module, `nq_instrument.py` : le lecteur du CSV canonique, le modèle de frais (commission fixe par contrat et par côté, et non un pourcentage taker), les propriétés du symbole (tick de 0,25 point valant 5 $, multiplicateur 20) et le levier. C'est la condition pour que la comparaison veuille dire quelque chose : si les règles bougeaient en même temps que l'actif, aucun écart ne serait interprétable.\n\n## Un pilier autonome\n\nToute la chaîne de données vit dans ce dépôt : extraction des ticks, normalisation OHLCV, génération des features volume profile (sessions Asia/London/NY, POC/VAH/VAL) et modèle de frais par contrat. La régénération des features a été vérifiée **identique bit à bit** au fichier produit par la chaîne d'origine — la consolidation n'a rien changé aux résultats.\n\nUne dette assumée : `sessions.py`, le découpage Asia/London/NY en heure de New York, est un **miroir** du fichier homonyme du projet crypto. Toute correction doit être reportée des deux côtés — la duplication est notée dans le dépôt plutôt que masquée.\n\n## Les huit stratégies en un coup d'œil\n\nLes mêmes huit que côté crypto, portées telles quelles — seul l'instrument change (NQ au lieu de BTC). **Référence** — Buy & Hold. **Suivi de tendance** — croisement SMA 50/200 et MACD. **Retour à la moyenne** — RSI et bandes de Bollinger. **Gestion du risque** — le RSI doublé de stops. **Composite** — la stratégie avancée (régime + momentum + risque). **Order-flow** — le volume profile par session.\n\n## Résolution — 1H aujourd'hui, 1m demain\n\nComme le frère crypto, ces backtests sont mesurés en barres d'une heure. Le projet vise le scalping rapide en 1 minute : la suite LEAN est en cours de reconstruction en 1m des deux côtés. Les chiffres ci-dessous restent ceux du 1H tant qu'ils n'ont pas été rejoués.\n\n## Résultats — 8 backtests sur 8\n\nLa stratégie volume profile ressort en tête : **+2,9 %, drawdown 0,9 %**, en 6 ordres. Elle est la mieux portée des huit, et pour une raison lisible : le volume profile par session épouse nativement les heures du CME, là où sur BTC les sessions sont une convention plaquée sur un marché qui ne ferme jamais.\n\n## Lire les écarts avec BTC\n\nLes écarts sont plus instructifs que les rendements, et la fenêtre courte impose la prudence — 20 jours de bougies contre 6 mois côté BTC.\n\n- **Buy & Hold** : −21,4 % sur le compte alors que NQ n'a baissé que de 3,5 % en prix. Un contrat porte ~6× de levier : le plancher de référence n'est plus du tout le même objet qu'en crypto.\n- **SMA 50/200** : −13,3 %, mais le chiffre ne juge pas la stratégie — une SMA 200 réclame ~8 jours de préchauffage sur une fenêtre de 20. Elle ne trade que 5 jours. Trop court pour conclure.\n- **RSI + stop/take** : rendement **identique** au RSI nu. Les stops en pourcentage (8 / 10 %) ne se déclenchent jamais sur NQ — l'instrument est trop peu volatil pour les atteindre. Un garde-fou qui ne se déclenche jamais n'est pas un garde-fou : c'est un paramètre mort.\n- **MACD** : −21,9 %, le même sur-trading qu'en crypto (18 ordres). Le défaut est dans la stratégie, pas dans l'actif.\n\n## Reste à faire\n\nLe montage LEAN — conteneur, `config.json`, montage du CSV — n'est pas versionné ici. À documenter et scripter, à l'image du frère, quand les backtests NQ reprendront.\n\n## Une chaîne, pas une prédiction\n\nUn mot sur la portée, à répéter ici comme côté crypto. Vingt jours de bougies, un seul instrument, des chiffres encore en 1 H : rien de tout cela n'a de crédibilité statistique, et ce n'est pas le but. Le livrable est la chaîne — extraction, features, moteur, modèle de frais par contrat — assez propre pour rejouer les mêmes stratégies sur n'importe quel actif du CME dès que l'historique 1 m sera là. Les rendements ne sont qu'un premier passage.",
-        "en": "## What changes, and what doesn't\n\nThe strategies stay identical to the crypto sibling — not one line of logic rewritten. Everything that differs from the crypto world is isolated in a single module, `nq_instrument.py`: the canonical CSV reader, the fee model (a fixed commission per contract and per side, not a taker percentage), the symbol properties (a 0.25-point tick worth $5, multiplier 20) and the leverage. That's the condition for the comparison to mean anything: if the rules moved along with the asset, no gap would be interpretable.\n\n## A self-contained pillar\n\nThe whole data chain lives in this repository: tick extraction, OHLCV normalization, volume-profile feature generation (Asia/London/NY sessions, POC/VAH/VAL) and the per-contract fee model. The feature regeneration was verified **identical bit for bit** to the file produced by the original chain — the consolidation changed nothing in the results.\n\nOne acknowledged debt: `sessions.py`, the Asia/London/NY split in New York time, is a **mirror** of the file of the same name in the crypto project. Any fix has to be carried over on both sides — the duplication is noted in the repository rather than hidden.\n\n## The eight strategies at a glance\n\nThe same eight as on the crypto side, ported as-is — only the instrument changes (NQ instead of BTC). **Benchmark** — Buy & Hold. **Trend following** — SMA 50/200 crossover and MACD. **Mean reversion** — RSI and Bollinger Bands. **Risk management** — the RSI paired with stops. **Composite** — the advanced strategy (regime + momentum + risk). **Order-flow** — the per-session volume profile.\n\n## Resolution — hourly today, 1-minute tomorrow\n\nLike the crypto sibling, these backtests are measured on hourly bars. The project targets fast 1-minute scalping: the LEAN suite is being rebuilt at 1m on both sides. The figures below remain the hourly ones until they've been replayed.\n\n## Results — 8 backtests out of 8\n\nThe volume-profile strategy comes out on top: **+2.9%, 0.9% drawdown**, in 6 orders. It's the best-ported of the eight, for a readable reason: the per-session volume profile natively matches CME hours, whereas on BTC the sessions are a convention laid over a market that never closes.\n\n## Reading the gaps versus BTC\n\nThe gaps teach more than the returns, and the short window calls for caution — 20 days of candles against 6 months on the BTC side.\n\n- **Buy & Hold**: −21.4% on the account while NQ only fell 3.5% in price. One contract carries ~6× leverage: the reference floor is no longer the same object at all as in crypto.\n- **SMA 50/200**: −13.3%, but the figure doesn't judge the strategy — an SMA 200 needs ~8 days of warmup over a 20-day window. It only trades for 5 days. Too short to conclude.\n- **RSI + stop/take**: return **identical** to the bare RSI. The percentage stops (8 / 10%) never trigger on NQ — the instrument is too quiet to reach them. A safeguard that never triggers isn't a safeguard: it's a dead parameter.\n- **MACD**: −21.9%, the same over-trading as in crypto (18 orders). The flaw is in the strategy, not in the asset.\n\n## Left to do\n\nThe LEAN setup — container, `config.json`, CSV mount — isn't versioned here. To be documented and scripted, following the sibling, when the NQ backtests resume.\n\n## A pipeline, not a prediction\n\nA word on scope, worth repeating here as on the crypto side. Twenty days of candles, a single instrument, figures still on hourly bars: none of it carries statistical credibility, and that isn't the point. The deliverable is the pipeline — extraction, features, engine, per-contract fee model — clean enough to replay the same strategies on any CME asset once the 1-minute history is in. The returns are only a first pass."
+        "fr": "## Ce qui change, et ce qui ne change pas\n\nLes stratégies restent identiques au frère crypto — mêmes règles, mêmes re-calibrages anti-churn (signaux lus sur 3 à 15 minutes, cooldowns, stops élargis). Tout ce qui diffère du monde crypto est isolé dans un seul module, `nq_instrument.py` : le lecteur du CSV canonique 1 m, le modèle de frais (commission fixe par contrat et par côté, et non un pourcentage taker), les propriétés du symbole (tick de 0,25 point valant 5 $, multiplicateur 20), le levier, et le dimensionnement en contrats ENTIERS — un futures ne s'achète pas en fraction. C'est la condition pour que la comparaison veuille dire quelque chose : si les règles bougeaient en même temps que l'actif, aucun écart ne serait interprétable.\n\n## La même fenêtre, le même banc\n\nLa fenêtre du run est celle du frère : du 1er juin au 10 juillet 2026 — 40 800 barres d'une minute côté NQ, la comparaison à conditions égales. Un mot d'honnêteté sur l'historique : la base de barres NQ n'est vraiment profonde que depuis fin janvier 2026 (avant, le téléchargement Quantower ne livre qu'un jour-échantillon par mois) ; la fenêtre commune est aussi ce que les données permettent de mieux. Le volume profile, lui, est reconstruit depuis 30 millions de transactions tick par tick (niveaux de 5 points, sessions à l'heure de New York).\n\n## Un pilier autonome\n\nToute la chaîne vit dans ce dépôt : extraction des ticks, normalisation OHLCV (le pas 1 m est le passage direct des barres minute), génération des features volume profile en vraie cadence 1 minute — la refonte du frère, reportée ici —, modèle de frais par contrat, figures des fiches relues depuis les JSON de résultats. Une dette assumée : `sessions.py` est un **miroir** du fichier homonyme du projet crypto ; toute correction se reporte des deux côtés, et la duplication est notée dans le dépôt plutôt que masquée.\n\n## Les huit stratégies en un coup d'œil\n\nLes mêmes huit que côté crypto, dans les mêmes familles. **Référence** — Buy & Hold, un contrat tenu quarante jours. **Suivi de tendance** — croisement SMA 9/21 et MACD, signaux sur 15 minutes. **Retour à la moyenne** — RSI (seuils fixes) et bandes de Bollinger (seuils adaptatifs). **Gestion du risque** — le RSI doublé de stops ATR. **Composite** — la stratégie avancée (régime + momentum + taille au risque). **Order-flow** — le volume profile par session, la seule nourrie aux ticks.\n\n## Ce que le NQ change : les frais ne sont plus l'ennemi — le levier, oui\n\nSur BTC, la leçon du scalping 1 m était les frais : 0,04 % du notionnel à chaque ordre, des dizaines de milliers de dollars engloutis avant re-calibrage. Sur NQ, la commission est fixe — environ 2 $ par contrat et par côté — et le total du banc tient entre 24 et 432 $ : un non-sujet. Le caractère de l'instrument est ailleurs. Un contrat NQ à ~30 000 points porte ~610 000 $ de notionnel : sur 100 000 $ de capital, c'est un levier ×6 incompressible, sans fraction possible. Chaque pour cent de l'indice pèse ~6 % du compte — le simple Buy & Hold encaisse un drawdown de 47 % — et le dimensionnement « au risque » se heurte à la granularité du contrat entier. Le micro-contrat MNQ (un dixième) rendrait cette finesse ; c'est l'instrument prévu pour les ordres réels.\n\n## Le seul juge : hors échantillon\n\nOn coupe les quarante jours en deux moitiés de vingt, sans jamais s'être calé dessus. Le verdict est le même que côté crypto, par un autre chemin : le début de la fenêtre ne prédit pas la fin. Le croisement SMA fait +27,8 % en juin puis rend −25,5 % en juillet — le mirage in-sample dans sa forme chimiquement pure. Le MACD affiche le meilleur net du banc (+13,8 %) mais le doit entièrement à juin (+32,5 %, puis −14,2 % sur des données jamais vues). La stratégie avancée et le volume profile racontent la même histoire en plus petit. Restent deux courbes positives des deux bords — Bollinger (+1,3 % puis +4,4 %) et le RSI à stops ATR (+0,8 % puis +0,9 %) — mais sur 12 à 50 ordres et une seule fenêtre : des candidates à confronter à d'autres fenêtres et à l'ES, pas des preuves. Aucun edge démontré, et le dire vaut mieux que de triturer les paramètres jusqu'à ce que la courbe passée sourie.\n\n## Une chaîne, pas une prédiction\n\nUn mot sur la portée, à répéter ici comme côté crypto. Une seule fenêtre de quarante jours, un seul instrument : aucune crédibilité statistique, et ce n'est pas le but. Le livrable est la chaîne — extraction, features, moteur, frais par contrat, jugement hors échantillon, figures régénérables depuis les résultats — prête à rejouer les mêmes stratégies sur l'ES dès que son historique 1 m sera collecté. Les rendements n'en sont qu'un premier passage.",
+        "en": "## What changes, and what doesn't\n\nThe strategies stay identical to the crypto sibling — same rules, same anti-churn recalibrations (signals read on 3-to-15-minute scales, cooldowns, widened stops). Everything that differs from the crypto world is isolated in a single module, `nq_instrument.py`: the canonical 1m CSV reader, the fee model (a fixed commission per contract and per side, not a taker percentage), the symbol properties (a 0.25-point tick worth $5, multiplier 20), the leverage, and sizing in WHOLE contracts — a futures contract has no fractions. That's the condition for the comparison to mean anything: if the rules moved along with the asset, no gap would be interpretable.\n\n## The same window, the same bench\n\nThe run window is the sibling's: June 1 to July 10, 2026 — 40,800 one-minute bars on the NQ side, a comparison on equal terms. A word of honesty about the history: the NQ bar database is only truly deep since late January 2026 (before that, the Quantower download delivers a single sample day per month); the common window is also the best the data allows. The volume profile, for its part, is rebuilt from 30 million tick-by-tick transactions (5-point levels, sessions in New York time).\n\n## A self-contained pillar\n\nThe whole chain lives in this repository: tick extraction, OHLCV normalization (the 1m step is a straight pass-through of the minute bars), volume-profile feature generation at true 1-minute cadence — the sibling's overhaul, carried over here —, the per-contract fee model, and fiche figures re-read from the LEAN result JSONs. One acknowledged debt: `sessions.py` is a **mirror** of the file of the same name in the crypto project; any fix is carried over on both sides, and the duplication is noted in the repository rather than hidden.\n\n## The eight strategies at a glance\n\nThe same eight as on the crypto side, in the same families. **Benchmark** — Buy & Hold, one contract held for forty days. **Trend following** — SMA 9/21 crossover and MACD, signals on 15 minutes. **Mean reversion** — RSI (fixed thresholds) and Bollinger Bands (adaptive thresholds). **Risk management** — the RSI paired with ATR stops. **Composite** — the advanced strategy (regime + momentum + risk-based sizing). **Order-flow** — the per-session volume profile, the only one fed by ticks.\n\n## What NQ changes: fees are no longer the enemy — leverage is\n\nOn BTC, the lesson of 1-minute scalping was fees: 0.04% of notional on every order, tens of thousands of dollars devoured before recalibration. On NQ the commission is fixed — about $2 per contract per side — and the whole bench totals between $24 and $432: a non-issue. The instrument's character lies elsewhere. One NQ contract at ~30,000 points carries ~$610,000 of notional: on $100,000 of capital, that's an incompressible 6× leverage, with no fractions available. Every percent of the index weighs ~6% of the account — plain Buy & Hold takes a 47% drawdown — and \"risk-based\" sizing runs into the whole-contract granularity. The MNQ micro contract (one tenth) would restore that finesse; it's the instrument planned for live orders.\n\n## The only judge: out-of-sample\n\nThe forty days are cut into two twenty-day halves, without ever having calibrated on them. The verdict is the same as on the crypto side, by another road: the start of the window does not predict the end. The SMA crossover makes +27.8% in June then gives back −25.5% in July — the in-sample mirage in its chemically pure form. The MACD posts the bench's best net (+13.8%) but owes it entirely to June (+32.5%, then −14.2% on data it had never seen). The advanced strategy and the volume profile tell the same story in smaller print. That leaves two curves positive on both sides — Bollinger (+1.3% then +4.4%) and the ATR-stopped RSI (+0.8% then +0.9%) — but on 12 to 50 orders and a single window: candidates to confront with other windows and with ES, not proof. No edge demonstrated, and saying so beats torturing parameters until the past curve smiles.\n\n## A pipeline, not a prediction\n\nA word on scope, worth repeating here as on the crypto side. A single forty-day window, a single instrument: no statistical credibility, and that isn't the point. The deliverable is the chain — extraction, features, engine, per-contract fees, out-of-sample judgment, figures regenerable from the results — ready to replay the same strategies on ES as soon as its 1-minute history is collected. The returns are only a first pass."
+      }
+    },
+    {
+      "id": "strat-buyhold",
+      "parent": "moteur-lean",
+      "numero": "01",
+      "famille": "reference",
+      "carteNom": {"fr": "Buy & Hold", "en": "Buy & Hold"},
+      "titre": {
+        "fr": "Buy & Hold (1 contrat NQ)",
+        "en": "Buy & Hold (1 NQ contract)"
+      },
+      "accroche": {
+        "fr": "Acheter un contrat, ne rien faire. Le plancher à battre — et le premier révélateur du levier.",
+        "en": "Buy one contract, then do nothing. The floor to beat — and the first thing to expose the leverage."
+      },
+      "statut": {"fr": "Référence", "en": "Benchmark"},
+      "renvois": ["plancher-buyhold"],
+      "noteResultats": true,
+      "fiche": {
+        "metriques": [
+          {"libelle": {"fr": "Rendement 40 j", "en": "40-day return"}, "valeur": {"fr": "−8,2 %", "en": "−8.2%"}},
+          {"libelle": {"fr": "Drawdown", "en": "Drawdown"}, "valeur": {"fr": "47 %", "en": "47%"}},
+          {"libelle": {"fr": "Frais", "en": "Fees"}, "valeur": {"fr": "2 $", "en": "$2"}}
+        ]
+      },
+      "items": [
+        {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-buyhold.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "Un contrat tenu quarante jours : l'indice perd 1,3 %, le compte 8,2 % — le levier en une image.", "en": "One contract held for forty days: the index loses 1.3%, the account 8.2% — leverage in one picture."}}
+      ],
+      "texte": {
+        "fr": "## La stratégie\n\nAcheter un contrat NQ au premier prix de la fenêtre, ne plus jamais toucher à rien. Aucun paramètre, aucun signal, un seul côté de frais — 2 $.\n\n## Pourquoi elle est là\n\nDeux rôles, comme côté crypto. D'abord le sol de vérité : c'est le seul backtest dont le résultat se recalcule à la main — cash + quantité × close × 20 $ le point — et l'équité recalculée colle à celle de LEAN à 0,000000 $ près. C'est ce qui permet de faire confiance au moteur, au lecteur de données et au modèle de frais avant de juger des stratégies plus complexes. Ensuite le plancher : une stratégie qui multiplie ordres et paramètres sans battre l'achat-conservation ne justifie pas son existence.\n\n## Résultat — mesuré en 1 minute\n\n−8,2 % sur le compte pendant que l'indice ne perdait que 1,3 % en prix (30 477 → 30 068 points). La différence, c'est l'instrument : un contrat à ~30 000 points porte ~610 000 $ de notionnel sur 100 000 $ de capital, un levier ×6 qu'on ne peut pas réduire — le contrat ne se coupe pas en morceaux. Et le rendement final ne dit rien du chemin : +3,4 % de plus-haut début juin, puis un drawdown de 47 %. Sur BTC, le plancher était l'actif nu (−12,9 %) ; sur NQ, le plancher est déjà un pari à levier. Ce n'est plus le même objet, et toutes les fiches qui suivent se lisent avec ça en tête.\n\n## Optimisation\n\nSans objet — il n'y a rien à optimiser. C'est précisément ce qui en fait un point de comparaison honnête : le Buy & Hold ne peut pas sur-apprendre.",
+        "en": "## The strategy\n\nBuy one NQ contract at the first price of the window, never touch anything again. No parameters, no signal, a single side of fees — $2.\n\n## Why it's here\n\nTwo roles, as on the crypto side. First, the truth floor: it's the only backtest whose result can be recomputed by hand — cash + quantity × close × $20 a point — and the recomputed equity matches LEAN's to $0.000000. That's what lets us trust the engine, the data reader and the fee model before judging more complex strategies. Second, the floor: a strategy that multiplies orders and parameters without beating buy-and-hold doesn't justify its existence.\n\n## Result — measured at 1 minute\n\n−8.2% on the account while the index only lost 1.3% in price (30,477 → 30,068 points). The difference is the instrument: one contract at ~30,000 points carries ~$610,000 of notional on $100,000 of capital, a 6× leverage that can't be dialed down — the contract doesn't come in slices. And the final return says nothing about the road: a +3.4% high in early June, then a 47% drawdown. On BTC the floor was the bare asset (−12.9%); on NQ the floor is already a leveraged bet. It's no longer the same object, and every card that follows reads with that in mind.\n\n## Optimization\n\nNot applicable — there is nothing to optimize. That's precisely what makes it an honest point of comparison: Buy & Hold cannot overfit."
+      }
+    },
+    {
+      "id": "strat-sma",
+      "parent": "moteur-lean",
+      "numero": "02",
+      "famille": "tendance",
+      "carteNom": {"fr": "SMA 9/21", "en": "SMA 9/21"},
+      "titre": {
+        "fr": "Croisement de moyennes (SMA 9/21)",
+        "en": "Moving-average crossover (SMA 9/21)"
+      },
+      "accroche": {
+        "fr": "Suivre la tendance dans sa forme la plus nue — et le mirage in-sample dans sa forme la plus pure.",
+        "en": "Trend-following in its barest form — and the in-sample mirage in its purest."
+      },
+      "statut": {"fr": "1 m : −4,8 %", "en": "1m: −4.8%"},
+      "renvois": ["suivi-tendance", "walk-forward"],
+      "noteResultats": true,
+      "fiche": {
+        "metriques": [
+          {"libelle": {"fr": "Rendement 40 j", "en": "40-day return"}, "valeur": {"fr": "−4,8 %", "en": "−4.8%"}},
+          {"libelle": {"fr": "Ordres", "en": "Orders"}, "valeur": {"fr": "122", "en": "122"}},
+          {"libelle": {"fr": "Frais", "en": "Fees"}, "valeur": {"fr": "304 $", "en": "$304"}},
+          {"libelle": {"fr": "Hors échantillon 1", "en": "Out-of-sample 1"}, "valeur": {"fr": "+27,8 %", "en": "+27.8%"}},
+          {"libelle": {"fr": "Hors échantillon 2", "en": "Out-of-sample 2"}, "valeur": {"fr": "−25,5 %", "en": "−25.5%"}}
+        ]
+      },
+      "items": [
+        {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-sma.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "+27,8 % en juin, −25,5 % en juillet : la frontière hors échantillon coupe la courbe en deux histoires opposées.", "en": "+27.8% in June, −25.5% in July: the out-of-sample boundary cuts the curve into two opposite stories."}}
+      ],
+      "texte": {
+        "fr": "## La stratégie\n\nDeux moyennes mobiles, une courte et une longue, lues sur des barres de 15 minutes. Quand la courte croise au-dessus, on achète ; au-dessous, on vend à découvert — toujours dans le sens d'un régime de fond de 12 heures, avec un stop à 1,5 % et un délai de 60 minutes entre deux trades. La recette anti-churn du frère crypto, à l'identique.\n\n## Résultat — mesuré en 1 minute\n\n122 ordres pour −4,8 % — mais le net n'est pas la ligne qui compte. Coupée en deux, la fenêtre raconte deux histoires opposées : +27,8 % sur les vingt premiers jours, −25,5 % sur les vingt suivants. La première moitié fait exactement ce qu'on rêverait d'encadrer ; la seconde le reprend, avec les intérêts. C'est le mirage in-sample dans sa forme chimiquement pure — et la meilleure démonstration du banc que le seul juge est hors échantillon. Côté BTC, le même croisement perdait des deux bords (« robuste, et robustement mauvais ») ; côté NQ, il fait plus dangereux : il donne d'abord envie d'y croire. Les frais, eux, ne sont plus l'histoire : 304 $ en tout — c'est le levier du contrat entier qui creuse le drawdown à 42 %.\n\n## Optimisation\n\nL'étude de grille — 49 réglages, heatmap, et le plateau qui distingue un vrai réglage d'un pic de hasard — a été menée côté crypto et n'a pas été refaite sur NQ : la démonstration pédagogique n'a pas besoin d'être dupliquée, elle se lit chez le jumeau.",
+        "en": "## The strategy\n\nTwo moving averages, one short and one long, read on 15-minute bars. When the short one crosses above, buy; below, sell short — always in the direction of a 12-hour background regime, with a 1.5% stop and a 60-minute delay between trades. The crypto sibling's anti-churn recipe, identical.\n\n## Result — measured at 1 minute\n\n122 orders for −4.8% — but the net isn't the line that matters. Cut in half, the window tells two opposite stories: +27.8% over the first twenty days, −25.5% over the next twenty. The first half does exactly what you'd dream of framing; the second takes it back, with interest. It's the in-sample mirage in its chemically pure form — and the bench's best demonstration that the only judge is out-of-sample. On BTC, the same crossover lost on both sides (\"robust, and robustly bad\"); on NQ it's more dangerous: it first makes you want to believe. Fees, meanwhile, are no longer the story: $304 in total — it's the whole-contract leverage that digs the drawdown to 42%.\n\n## Optimization\n\nThe grid study — 49 settings, the heatmap, and the plateau that separates a real setting from a lucky spike — was run on the crypto side and wasn't redone on NQ: the pedagogical demonstration doesn't need duplicating, it reads at the twin's."
+      }
+    },
+    {
+      "id": "strat-macd",
+      "parent": "moteur-lean",
+      "numero": "03",
+      "famille": "tendance",
+      "carteNom": {"fr": "MACD", "en": "MACD"},
+      "titre": {
+        "fr": "MACD (12, 26, 9)",
+        "en": "MACD (12, 26, 9)"
+      },
+      "accroche": {
+        "fr": "Le meilleur net du banc — et la démonstration qu'un net flatteur peut ne rien promettre.",
+        "en": "The bench's best net — and proof that a flattering net can promise nothing."
+      },
+      "statut": {"fr": "1 m : +13,8 %", "en": "1m: +13.8%"},
+      "renvois": ["suivi-tendance"],
+      "noteResultats": true,
+      "fiche": {
+        "metriques": [
+          {"libelle": {"fr": "Rendement 40 j", "en": "40-day return"}, "valeur": {"fr": "+13,8 %", "en": "+13.8%"}},
+          {"libelle": {"fr": "Ordres", "en": "Orders"}, "valeur": {"fr": "152", "en": "152"}},
+          {"libelle": {"fr": "Frais", "en": "Fees"}, "valeur": {"fr": "352 $", "en": "$352"}},
+          {"libelle": {"fr": "Hors échantillon 1", "en": "Out-of-sample 1"}, "valeur": {"fr": "+32,5 %", "en": "+32.5%"}},
+          {"libelle": {"fr": "Hors échantillon 2", "en": "Out-of-sample 2"}, "valeur": {"fr": "−14,2 %", "en": "−14.2%"}}
+        ]
+      },
+      "items": [
+        {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-macd.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "Tout le gain se construit en juin ; à partir de la frontière hors échantillon, la courbe ne fait que rendre.", "en": "All the gain is built in June; from the out-of-sample boundary on, the curve only gives back."}}
+      ],
+      "texte": {
+        "fr": "## La stratégie\n\nLe suivi de tendance en plus réactif : le MACD mesure le momentum de la tendance plutôt que la tendance elle-même. Croisement lu sur le signe de l'histogramme, barres de 15 minutes, régime de fond de 12 heures, stop 1,5 %, cooldown 60 minutes — le miroir exact du frère.\n\n## Résultat — mesuré en 1 minute\n\nLe meilleur net du banc : 152 ordres, +13,8 %. Et le chiffre le moins fiable. La coupe en deux le montre sans appel : +32,5 % sur la première moitié — le MACD attrape la grande jambe de juin dans les deux sens —, puis −14,2 % sur la seconde, sur des données qu'il n'avait jamais vues. Le +13,8 % final est un héritage de juin, pas une propriété de la stratégie. Côté BTC, la même recette rendait −9,4 % : deux marchés, deux verdicts nets opposés, aucun des deux ne tient hors échantillon. Un petit chiffre qui tient vaudra toujours plus qu'un grand chiffre qui ne tient pas.\n\n## Optimisation\n\nNon refaite sur NQ — les deux démonstrations du banc (le plateau du croisement de moyennes, le mirage du RSI) vivent côté crypto et suffisent : le juge qui tranche ici est l'out-of-sample, rapporté ci-dessus.",
+        "en": "## The strategy\n\nTrend-following, more reactive: the MACD measures the trend's momentum rather than the trend itself. Crossover read on the histogram's sign, 15-minute bars, 12-hour background regime, 1.5% stop, 60-minute cooldown — the sibling's exact mirror.\n\n## Result — measured at 1 minute\n\nThe bench's best net: 152 orders, +13.8%. And the least reliable number. The two-way cut shows it beyond appeal: +32.5% over the first half — the MACD catches June's big leg in both directions —, then −14.2% over the second, on data it had never seen. The final +13.8% is an inheritance from June, not a property of the strategy. On BTC, the same recipe returned −9.4%: two markets, two opposite net verdicts, neither holding out-of-sample. A small number that holds will always be worth more than a big number that doesn't.\n\n## Optimization\n\nNot redone on NQ — the bench's two demonstrations (the moving-average plateau, the RSI mirage) live on the crypto side and suffice: the judge that rules here is the out-of-sample, reported above."
+      }
+    },
+    {
+      "id": "strat-rsi",
+      "parent": "moteur-lean",
+      "numero": "04",
+      "famille": "retour",
+      "carteNom": {"fr": "RSI", "en": "RSI"},
+      "titre": {
+        "fr": "RSI : retour à la moyenne (30/70)",
+        "en": "RSI: mean reversion (30/70)"
+      },
+      "accroche": {
+        "fr": "Parier contre l'excès, seulement dans le sens du régime — au prix de ne presque jamais trader.",
+        "en": "Betting against the excess, only in the regime's direction — at the price of hardly ever trading."
+      },
+      "statut": {"fr": "1 m : ~à l'équilibre", "en": "1m: ~breakeven"},
+      "renvois": ["retour-moyenne", "walk-forward"],
+      "noteResultats": true,
+      "fiche": {
+        "metriques": [
+          {"libelle": {"fr": "Rendement 40 j", "en": "40-day return"}, "valeur": {"fr": "+0,9 %", "en": "+0.9%"}},
+          {"libelle": {"fr": "Ordres", "en": "Orders"}, "valeur": {"fr": "12", "en": "12"}},
+          {"libelle": {"fr": "Frais", "en": "Fees"}, "valeur": {"fr": "24 $", "en": "$24"}},
+          {"libelle": {"fr": "Hors échantillon 1", "en": "Out-of-sample 1"}, "valeur": {"fr": "+1,2 %", "en": "+1.2%"}},
+          {"libelle": {"fr": "Hors échantillon 2", "en": "Out-of-sample 2"}, "valeur": {"fr": "−0,3 %", "en": "−0.3%"}}
+        ]
+      },
+      "items": [
+        {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-rsi.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "Six trades par moitié : une courbe presque plate, un drawdown de 3,3 % — la discrétion a un mérite, pas un edge.", "en": "Six trades per half: a nearly flat curve, a 3.3% drawdown — discretion has a merit, not an edge."}}
+      ],
+      "texte": {
+        "fr": "## La stratégie\n\nContre-tendance filtrée : on n'achète le repli (RSI sous 30) que dans un régime haussier, on ne vend le rebond (RSI sur 70) que dans un régime baissier. RSI court sur barres de 3 minutes, sortie au retour à la moyenne (RSI ~50), take 0,8 %, stop 1,0 %, cooldown 45 minutes — le miroir du frère, correctif de cadence compris.\n\n## Résultat — mesuré en 1 minute\n\nDouze ordres en quarante jours — six par moitié — pour +0,9 %. À l'équilibre des deux bords (+1,2 % puis −0,3 %) : tout tient dans le bruit de six trades. Le filtre de régime, conçu pour ne fade que les excès « sains », filtre presque tout sur un NQ qui alterne jambe de fond et consolidation. Ce que la discrétion achète en revanche : un drawdown de 3,3 %, sans commune mesure avec les 47 % du plancher. Même conclusion que côté BTC (~0 % aussi) : le RSI filtré ne perd pas — il ne prouve rien non plus.\n\n## Optimisation\n\nLa démonstration du « mirage RSI » — un balayage de grille qui améliore l'in-sample et détruit l'out-of-sample — a été menée côté crypto ; elle se lit chez le jumeau et n'a pas été dupliquée ici.",
+        "en": "## The strategy\n\nFiltered counter-trend: buy the dip (RSI under 30) only in a bullish regime, sell the bounce (RSI over 70) only in a bearish one. Short RSI on 3-minute bars, exit at the return to the mean (RSI ~50), 0.8% take, 1.0% stop, 45-minute cooldown — the sibling's mirror, cadence fix included.\n\n## Result — measured at 1 minute\n\nTwelve orders in forty days — six per half — for +0.9%. Breakeven on both sides (+1.2% then −0.3%): everything fits in the noise of six trades. The regime filter, designed to fade only \"healthy\" excesses, filters almost everything on an NQ that alternates between a background leg and consolidation. What discretion buys, though: a 3.3% drawdown, nothing like the floor's 47%. Same conclusion as on BTC (~0% too): the filtered RSI doesn't lose — it doesn't prove anything either.\n\n## Optimization\n\nThe \"RSI mirage\" demonstration — a grid sweep that improves in-sample and destroys out-of-sample — was run on the crypto side; it reads at the twin's and wasn't duplicated here."
+      }
+    },
+    {
+      "id": "strat-bollinger",
+      "parent": "moteur-lean",
+      "numero": "05",
+      "famille": "retour",
+      "carteNom": {"fr": "Bollinger", "en": "Bollinger"},
+      "titre": {
+        "fr": "Bandes de Bollinger (20, 2σ)",
+        "en": "Bollinger Bands (20, 2σ)"
+      },
+      "accroche": {
+        "fr": "Le retour à la moyenne avec un seuil qui respire — la seule courbe positive des deux bords de la fenêtre.",
+        "en": "Mean reversion with a breathing threshold — the only curve positive on both sides of the window."
+      },
+      "statut": {"fr": "1 m : +5,7 %", "en": "1m: +5.7%"},
+      "renvois": ["retour-moyenne"],
+      "noteResultats": true,
+      "fiche": {
+        "metriques": [
+          {"libelle": {"fr": "Rendement 40 j", "en": "40-day return"}, "valeur": {"fr": "+5,7 %", "en": "+5.7%"}},
+          {"libelle": {"fr": "Ordres", "en": "Orders"}, "valeur": {"fr": "50", "en": "50"}},
+          {"libelle": {"fr": "Frais", "en": "Fees"}, "valeur": {"fr": "100 $", "en": "$100"}},
+          {"libelle": {"fr": "Hors échantillon 1", "en": "Out-of-sample 1"}, "valeur": {"fr": "+1,3 %", "en": "+1.3%"}},
+          {"libelle": {"fr": "Hors échantillon 2", "en": "Out-of-sample 2"}, "valeur": {"fr": "+4,4 %", "en": "+4.4%"}}
+        ]
+      },
+      "items": [
+        {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-bollinger.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "Positive avant ET après la frontière hors échantillon — sur 50 ordres et une seule fenêtre : candidate, pas preuve.", "en": "Positive before AND after the out-of-sample boundary — on 50 orders and a single window: a candidate, not proof."}}
+      ],
+      "texte": {
+        "fr": "## La stratégie\n\nComme le RSI, mais avec une enveloppe qui respire avec la volatilité : bandes à ±2 écarts-types sur barres de 5 minutes, fade filtré par le régime (repli sous la bande basse en régime haussier → long ; rebond au-dessus de la bande haute en régime baissier → short), sortie au retour à la bande médiane, take 0,8 %, stop 1,0 %, cooldown 45 minutes.\n\n## Résultat — mesuré en 1 minute\n\nCinquante ordres, +5,7 % — et surtout la seule stratégie du banc positive dans LES DEUX moitiés de la fenêtre : +1,3 % en juin, +4,4 % en juillet. C'est exactement le profil qu'on cherche… et exactement le moment d'être prudent : cinquante ordres sur une seule fenêtre de quarante jours ne démontrent rien. Le contraste avec BTC est réel — là-bas, la même recette rendait −2,6 %, négative des deux bords — et il a une lecture plausible : le seuil adaptatif épouse une volatilité NQ qui alterne calme et à-coups, là où le seuil fixe du RSI reste muet. Mais « plausible » n'est pas « démontré » : c'est une candidate à confronter à l'ES et à d'autres fenêtres, pas un edge établi.\n\n## Optimisation\n\nNon menée sur NQ. Si une stratégie du banc mérite un jour son propre balayage walk-forward, c'est celle-ci — précisément parce qu'elle est la seule à donner envie d'y croire.",
+        "en": "## The strategy\n\nLike the RSI, but with an envelope that breathes with volatility: bands at ±2 standard deviations on 5-minute bars, a regime-filtered fade (dip under the lower band in a bullish regime → long; bounce above the upper band in a bearish one → short), exit at the return to the middle band, 0.8% take, 1.0% stop, 45-minute cooldown.\n\n## Result — measured at 1 minute\n\nFifty orders, +5.7% — and above all the only strategy on the bench positive in BOTH halves of the window: +1.3% in June, +4.4% in July. That's exactly the profile you're looking for… and exactly the moment to be careful: fifty orders over a single forty-day window demonstrate nothing. The contrast with BTC is real — there, the same recipe returned −2.6%, negative on both sides — and it has a plausible reading: the adaptive threshold hugs an NQ volatility that alternates calm and jolts, where the RSI's fixed threshold stays mute. But \"plausible\" isn't \"demonstrated\": it's a candidate to confront with ES and other windows, not an established edge.\n\n## Optimization\n\nNot run on NQ. If one strategy on this bench ever deserves its own walk-forward sweep, it's this one — precisely because it's the only one that makes you want to believe."
+      }
+    },
+    {
+      "id": "strat-risque",
+      "parent": "moteur-lean",
+      "numero": "06",
+      "famille": "risque",
+      "carteNom": {"fr": "RSI + stops", "en": "RSI + stops"},
+      "titre": {
+        "fr": "Gestion du risque (RSI + stops ATR)",
+        "en": "Risk management (RSI + ATR stops)"
+      },
+      "accroche": {
+        "fr": "Même signal que le RSI nu, mais des garde-fous dimensionnés à la volatilité — et qui, eux, se déclenchent.",
+        "en": "Same signal as the bare RSI, but safeguards sized to volatility — and these ones do trigger."
+      },
+      "statut": {"fr": "1 m : +1,8 %", "en": "1m: +1.8%"},
+      "renvois": ["gestion-risque"],
+      "noteResultats": true,
+      "fiche": {
+        "metriques": [
+          {"libelle": {"fr": "Rendement 40 j", "en": "40-day return"}, "valeur": {"fr": "+1,8 %", "en": "+1.8%"}},
+          {"libelle": {"fr": "Ordres", "en": "Orders"}, "valeur": {"fr": "12", "en": "12"}},
+          {"libelle": {"fr": "Frais", "en": "Fees"}, "valeur": {"fr": "24 $", "en": "$24"}},
+          {"libelle": {"fr": "Hors échantillon 1", "en": "Out-of-sample 1"}, "valeur": {"fr": "+0,8 %", "en": "+0.8%"}},
+          {"libelle": {"fr": "Hors échantillon 2", "en": "Out-of-sample 2"}, "valeur": {"fr": "+0,9 %", "en": "+0.9%"}}
+        ]
+      },
+      "items": [
+        {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-risque.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "Le plus petit drawdown du banc (2,3 %) : le risque est tenu — l'edge, lui, reste à démontrer.", "en": "The bench's smallest drawdown (2.3%): risk is held — the edge remains to be shown."}}
+      ],
+      "texte": {
+        "fr": "## La stratégie\n\nLe même signal que le RSI nu — c'est voulu : on isole la variable « gestion du risque ». Ce qui change, c'est la sortie : stop à 2 × ATR et take à 3 × ATR, l'ATR étant mesuré sur des barres de 3 minutes reconstruites. Les garde-fous sont dimensionnés à la volatilité de l'instrument au lieu d'être des pourcentages arbitraires.\n\n## Résultat — mesuré en 1 minute\n\nDouze ordres, +1,8 %, positive des deux bords (+0,8 % puis +0,9 %) — et six trades par moitié : rien de démontrable, comme pour le RSI nu. Mais la fiche montre autre chose. Dans la version horaire, les stops en pourcentage (8 et 10 %) ne se déclenchaient jamais sur NQ — des paramètres morts. Les stops ATR, eux, vivent à la bonne échelle : ils se déclenchent, encadrent chaque trade, et tiennent le drawdown à 2,3 % — le plus bas du banc, sur un instrument dont le simple plancher encaisse 47 %. Le risque est maîtrisé ; l'avantage, lui, reste à démontrer. Côté BTC, même diptyque : la version à stops ATR se distinguait à peine du RSI nu en rendement.\n\n## Optimisation\n\nNon menée — le propos de la fiche est le dimensionnement du risque, pas la chasse au réglage.",
+        "en": "## The strategy\n\nThe same signal as the bare RSI — deliberately: it isolates the \"risk management\" variable. What changes is the exit: a stop at 2 × ATR and a take at 3 × ATR, with the ATR measured on rebuilt 3-minute bars. The safeguards are sized to the instrument's volatility instead of being arbitrary percentages.\n\n## Result — measured at 1 minute\n\nTwelve orders, +1.8%, positive on both sides (+0.8% then +0.9%) — and six trades per half: nothing demonstrable, as with the bare RSI. But this page shows something else. In the hourly version, the percentage stops (8 and 10%) never triggered on NQ — dead parameters. The ATR stops live at the right scale: they trigger, they frame every trade, and they hold the drawdown at 2.3% — the bench's lowest, on an instrument whose plain floor takes 47%. The risk is under control; the edge remains to be shown. On BTC, the same diptych: the ATR-stopped version barely distinguished itself from the bare RSI in return.\n\n## Optimization\n\nNot run — the point of this page is risk sizing, not settings-hunting."
+      }
+    },
+    {
+      "id": "strat-avancee",
+      "parent": "moteur-lean",
+      "numero": "07",
+      "famille": "composite",
+      "carteNom": {"fr": "Stratégie avancée", "en": "Advanced strategy"},
+      "titre": {
+        "fr": "Stratégie avancée (capstone)",
+        "en": "Advanced strategy (capstone)"
+      },
+      "accroche": {
+        "fr": "Tout au même endroit : régime, momentum, taille au risque, stop suiveur — et la granularité du contrat qui casse une promesse.",
+        "en": "Everything in one place: regime, momentum, risk-based sizing, trailing stop — and contract granularity breaking one promise."
+      },
+      "statut": {"fr": "1 m : +6,3 %", "en": "1m: +6.3%"},
+      "renvois": ["strategie-composite", "gestion-risque"],
+      "noteResultats": true,
+      "fiche": {
+        "metriques": [
+          {"libelle": {"fr": "Rendement 40 j", "en": "40-day return"}, "valeur": {"fr": "+6,3 %", "en": "+6.3%"}},
+          {"libelle": {"fr": "Ordres", "en": "Orders"}, "valeur": {"fr": "128", "en": "128"}},
+          {"libelle": {"fr": "Frais", "en": "Fees"}, "valeur": {"fr": "256 $", "en": "$256"}},
+          {"libelle": {"fr": "Hors échantillon 1", "en": "Out-of-sample 1"}, "valeur": {"fr": "+9,7 %", "en": "+9.7%"}},
+          {"libelle": {"fr": "Hors échantillon 2", "en": "Out-of-sample 2"}, "valeur": {"fr": "−3,1 %", "en": "−3.1%"}}
+        ]
+      },
+      "items": [
+        {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-avancee.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "Le gain se construit en juin, la seconde moitié rend une partie : +9,7 % puis −3,1 %.", "en": "The gain is built in June, the second half gives part of it back: +9.7% then −3.1%."}}
+      ],
+      "texte": {
+        "fr": "## La stratégie\n\nLa capstone du banc : un régime de fond de 12 heures, une entrée quand le MACD croise dans le sens du régime et que le RSI confirme, une taille calculée pour risquer 0,5 % du capital, un stop suiveur à 3 × ATR et un take à 5 × ATR — tout le signal sur barres de 15 minutes, les déclenchements en 1 minute.\n\n## Résultat — mesuré en 1 minute\n\n128 ordres, +6,3 % — porté par juin (+9,7 %), rendu en partie en juillet (−3,1 %) : même signature que le MACD dont elle hérite le déclencheur, en amorti par ses garde-fous. Mais la vraie leçon de cette fiche est ailleurs : la promesse du « sizing au risque » ne survit pas à la granularité du NQ. Risquer 0,5 % de 100 000 $, c'est un budget de 500 $ ; un stop à 3 × ATR sur UN contrat en risque ~2 000 à 3 000 $. L'arrondi plancher à un contrat entier fait que chaque trade risque plusieurs fois son budget — le paramètre existe, la promesse non. C'est le micro-contrat MNQ (un dixième du NQ) qui rendrait cette finesse ; il est prévu comme instrument des ordres réels. Côté BTC, où la position se découpe à la décimale près, le même sizing tenait sa promesse — et rendait −3,0 %.\n\n## Optimisation\n\nNon menée — une capstone à sept paramètres sur quarante jours est le terrain de sur-apprentissage par excellence ; le juge reste l'out-of-sample ci-dessus.",
+        "en": "## The strategy\n\nThe bench's capstone: a 12-hour background regime, an entry when the MACD crosses in the regime's direction and the RSI confirms, a size computed to risk 0.5% of capital, a trailing stop at 3 × ATR and a take at 5 × ATR — all of the signal on 15-minute bars, triggers at 1 minute.\n\n## Result — measured at 1 minute\n\n128 orders, +6.3% — carried by June (+9.7%), partly given back in July (−3.1%): the same signature as the MACD whose trigger it inherits, dampened by its safeguards. But this page's real lesson is elsewhere: the promise of \"risk-based sizing\" doesn't survive NQ's granularity. Risking 0.5% of $100,000 is a $500 budget; a 3 × ATR stop on ONE contract risks ~$2,000 to $3,000. The floor-rounding to a whole contract means every trade risks several times its budget — the parameter exists, the promise doesn't. The MNQ micro contract (one tenth of NQ) would restore that finesse; it's planned as the instrument for live orders. On BTC, where the position slices to the decimal, the same sizing kept its promise — and returned −3.0%.\n\n## Optimization\n\nNot run — a seven-parameter capstone over forty days is prime overfitting ground; the judge remains the out-of-sample above."
+      }
+    },
+    {
+      "id": "strat-volume-profile",
+      "parent": "moteur-lean",
+      "numero": "08",
+      "famille": "volume",
+      "carteNom": {"fr": "Volume profile", "en": "Volume profile"},
+      "titre": {
+        "fr": "Volume profile par session",
+        "en": "Per-session volume profile"
+      },
+      "accroche": {
+        "fr": "La seule stratégie nourrie aux ticks — sur le seul marché où les sessions ne sont pas une convention.",
+        "en": "The only strategy fed by ticks — on the only market where sessions aren't a convention."
+      },
+      "statut": {"fr": "1 m : +0,8 %", "en": "1m: +0.8%"},
+      "renvois": ["volume-profile"],
+      "noteResultats": true,
+      "fiche": {
+        "metriques": [
+          {"libelle": {"fr": "Rendement 40 j", "en": "40-day return"}, "valeur": {"fr": "+0,8 %", "en": "+0.8%"}},
+          {"libelle": {"fr": "Ordres", "en": "Orders"}, "valeur": {"fr": "216", "en": "216"}},
+          {"libelle": {"fr": "Frais", "en": "Fees"}, "valeur": {"fr": "432 $", "en": "$432"}},
+          {"libelle": {"fr": "Hors échantillon 1", "en": "Out-of-sample 1"}, "valeur": {"fr": "+5,4 %", "en": "+5.4%"}},
+          {"libelle": {"fr": "Hors échantillon 2", "en": "Out-of-sample 2"}, "valeur": {"fr": "−4,3 %", "en": "−4.3%"}}
+        ]
+      },
+      "items": [
+        {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-vp.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "216 ordres pour finir à l'équilibre : la cassure de value area à la minute achète les faux breakouts, sur NQ comme sur BTC.", "en": "216 orders to end at breakeven: minute-level value-area breaks buy the false breakouts, on NQ as on BTC."}}
+      ],
+      "texte": {
+        "fr": "## La stratégie\n\nLa seule qui ne lit pas des bougies. Deux flux entrent dans le même algorithme : le prix en barres d'une minute, et les descripteurs du profil de la session en cours — POC, VAH, VAL, delta — reconstruits depuis 30 millions de transactions tick par tick (niveaux de 5 points), développés minute après minute. La lecture est symétrique : cassure du haut de la value area confirmée par un delta acheteur → long ; cassure du bas confirmée par un delta vendeur → short. Le profil fournit lui-même la cible et le stop. Garde-fous posés d'avance : pas d'entrée hors session, ni dans les quinze premières minutes d'une session, ni à cheval sur deux enchères.\n\nUn point donne à cette fiche une saveur particulière : sur NQ, Asia/London/New York n'est pas une convention plaquée sur un marché qui ne ferme jamais — c'est l'horloge NATIVE du CME. Si l'ancrage par session devait aider quelque part, c'est ici.\n\n## Résultat — mesuré en 1 minute\n\nEt pourtant : 216 ordres pour +0,8 %, +5,4 % puis −4,3 % hors échantillon. L'avantage attendu des « vraies » sessions ne se matérialise pas : la cassure de value area à la minute se fait piéger par les faux breakouts sur NQ comme sur BTC (−17,8 % là-bas). Le profil éclaire le contexte d'une enchère ; il ne fait pas un signal d'entrée à la minute. Détail d'instrument assumé : l'edge minimal exigé reste à 0,2 % (le frère l'a doublé à 0,4 % pour couvrir ses frais proportionnels ; les frais NQ sont fixes et n'imposent rien de tel — la différence est documentée dans le code, pas réglée sur la courbe).\n\n## Optimisation\n\nNon menée. L'analyse order-flow multi-échelles — footprint, delta par niveau — vit côté crypto, où elle a déjà rendu son verdict : le profil est un instrument de lecture, pas un générateur de signaux.",
+        "en": "## The strategy\n\nThe only one that doesn't read candles. Two feeds enter the same algorithm: the price in one-minute bars, and the descriptors of the session's developing profile — POC, VAH, VAL, delta — rebuilt from 30 million tick-by-tick transactions (5-point levels), advancing minute by minute. The reading is symmetric: a break of the value area's top confirmed by buyer delta → long; a break of its bottom confirmed by seller delta → short. The profile supplies its own target and stop. Safeguards set in advance: no entry outside a session, nor in a session's first fifteen minutes, nor straddling two auctions.\n\nOne point gives this page its particular flavor: on NQ, Asia/London/New York isn't a convention laid over a market that never closes — it's the CME's NATIVE clock. If session anchoring were going to help anywhere, it's here.\n\n## Result — measured at 1 minute\n\nAnd yet: 216 orders for +0.8%, +5.4% then −4.3% out-of-sample. The expected advantage of \"real\" sessions doesn't materialize: minute-level value-area breaks get trapped by false breakouts on NQ as on BTC (−17.8% over there). The profile lights up an auction's context; it doesn't make a minute-level entry signal. An owned instrument detail: the minimum required edge stays at 0.2% (the sibling doubled it to 0.4% to cover its proportional fees; NQ fees are fixed and demand nothing of the sort — the difference is documented in the code, not tuned on the curve).\n\n## Optimization\n\nNot run. The multi-scale order-flow analysis — footprint, delta per level — lives on the crypto side, where it has already returned its verdict: the profile is a reading instrument, not a signal generator."
       }
     },
     {
