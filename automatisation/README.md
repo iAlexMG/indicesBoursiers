@@ -19,11 +19,13 @@ indicateurs & stratégies Quantower → shadow mode → ordres semi-automatisés
 
 ```
 poc/          Phase 0 : stratégie de mesure DANS Quantower (Phase0Strategy) + console diagnostic API (Phase0Poc)
-extractor/    Phase 1 : extracteur incrémental ticks NQ → H:\IndicesBoursiers\historique\NQ-<contrat>.db
 indicators/   Phase 3 : indicateurs C# Quantower (VP session, delta EMA24, signaux par stratégie)
-strategies/   Phase 4-5 : stratégies Quantower (shadow puis exécution avec risk manager)
-docs/         journal.md (décisions datées) + rapports de phase
+orderflow/    sondes et indicateurs orderflow (CVD)
+hybrides/     Phases 4-5 : le code LIVE des 3 stratégies hybrides + la sonde « Ordres Probe (SIM) »
+              — UNE DLL net10.0, garde anti-compte-réel, journal NDJSON (parité avec les jumeaux LEAN)
+docs/         journal.md (décisions datées) + rapports de phase + specs hybrides + étude Simulator
 ```
+(l'extracteur ticks/barres de la Phase 1 vit dans `../historique/NqExtractor`)
 
 ## Comprendre le projet (docs pédagogiques)
 

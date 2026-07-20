@@ -1,5 +1,131 @@
 # Journal du projet — décisions datées & mesures clés
 
+## 2026-07-20 — CODE LIVE FAIT : les 3 hybrides + la sonde « Ordres Probe (SIM) » (`hybrides/`)
+
+**UNE DLL (`Hybrides.dll`, net10.0), 4 stratégies** : `OrbHybride` (H1, bracket),
+`SmaSuiveurHybride` (H2, ModifyOrder), `RsiBracketHybride` (H3, annulation) +
+`OrdresProbe` (la sonde §9 en machine à états : dump GetAlowedOrderTypes → bracket +
+2 modifs + close (sort du bracket OBSERVÉ) → TP touché → SL touché → Flatten).
+Méthode Phase 0 tenue : API re-dumpée par réflexion AVANT d'écrire (846 types) —
+`Flatten(symbole, compte)` fait le « tout annuler + liquider » en UN appel ;
+`GetAlowedOrderTypes` (coquille du vendor incluse) donne le type MARKET par connexion ;
+compile **0 erreur / 0 warning du premier coup** contre la v1.146.14.
+Architecture : compte en `[InputParameter]` (même code sim/réel) ; **garde anti-compte-réel**
+(refus si connexion ≠ TradingSimulator, paramètre « phase 5 » pour lever — la sonde n'a PAS
+ce paramètre, codé en dur) ; seed 48 h par `GetHistory` puis barres 1 m VIVANTES depuis
+`NewLast` (patron NqFeed) ; brackets en `SlTpHolder` **Offset ticks** ; flat forcé sur
+HORLOGE murale (timer 10 s — la réponse au trou « clôture avancée » du volet C : heure de
+flat paramétrable) ; kill switch = Stop ; journal NDJSON même format que les jumeaux
+(file bornée + thread, InvariantCulture, append + `demarrage`/`arret`).
+**PARITÉ INDICATEURS MESURÉE** (banc `hybrides/parite/` : rejeu du CSV 1 m du banc dans
+les classes C#) : **3 799 comparaisons vs les journaux LEAN des jumeaux, 10 écarts, tous
+dans les 5 premières heures du 1er juin** (amorçage de Wilder, max 0,35 pt de RSI, éteint
+en ~90 min) — au-delà : exact à l'arrondi près. ✅ DÉPLOYÉ dans
+`C:\Quantower\Settings\Scripts\Strategies\Hybrides` (redémarrage Quantower requis).
+🪤 Bug trouvé au passage : les ANCIENS deploy.ps1 (`..\..\..\Settings`) visent `C:\Settings`
+(fantôme) au lieu de `C:\Quantower\Settings` — corrigé dans `hybrides/deploy.ps1`, les
+anciens scripts restent à reprendre. **À SONDER** (la compile ne prouve pas tout) :
+sémantique Offset=ticks, sort du bracket après `Close()`, ordre des événements
+`PositionRemoved`/`TradeAdded` — c'est le rôle de la sonde, pendant l'essai 7 jours.
+**RESTE : activer l'essai 7 jours (décision user, quand tout est prêt) → dérouler la sonde
+→ semaine de POC des 3 hybrides** (critère de succès des specs, journal à l'appui).
+
+## 2026-07-19 — Volet C FAIT : jumeaux backtest des 3 hybrides (pilier Backtesting)
+
+3 jumeaux LEAN **à côté des 8** dans `backtesting/backtests/algorithms/` — `orb_nq.py`
+(H1, bracket), `sma_suiveur_nq.py` (H2, modification), `rsi_bracket_nq.py` (H3,
+annulation) — + `cadre_hybride.py` (cadre commun, même rôle que `nq_instrument.py` :
+séance ET par zoneinfo, garde-fou 2 pertes pleines ré-armé à 09:30, cooldown 15 min,
+journal NDJSON). SL/TP/suiveur **simulés dans la boucle 1 m** (patron
+`risque_stops_nq.py`) ; le jumeau reproduit les DÉCISIONS, la mécanique d'ordres réelle
+se prouvera en live. **3 runs LEAN menés** (fenêtre du banc 06-01 → 07-10, Launcher du
+frère crypto) ; journaux de décisions dans `backtests/journaux/<strategie>/` (un fichier
+NDJSON par jour ET, hors git — c'est le comparant de la phase 4). **Invariants
+vérifiés** sur les 2 998 événements : fenêtres d'entrée ET respectées, suiveur jamais en
+recul, aucune entrée sous garde-fou, flat forcé ≥ 16:55. Chiffres : H1 28 entrées
+(1/jour max) ; H2 75 entrées, stop modifié **617 fois** ; H3 103 entrées, 17 annulations
+sur RSI 50. Rentabilité = non-sujet (cadrage user).
+🪤 **Trouvaille — clôture avancée** : le 3 juillet (CME 13:00 ET), pas de barre 16:55 →
+H2 a porté sa position le week-end, flat à la réouverture dimanche 18:01 ET. L'angle
+mort est dans la SPEC ; ajouté aux « décisions restantes » de strategies-hybrides.md (le
+live devra flatter avant la clôture réelle du jour). **Reste** : code live des 3
+stratégies + sonde « Ordres Probe (SIM) » → activer l'essai 7 j → semaine de POC.
+
+## 2026-07-19 — Volet B FAIT : étude Simulator ([etude-simulator.md](etude-simulator.md))
+
+Méthode Phase 0 (réflexion DLL + poste + doc officielle, **zéro déploiement, zéro ordre**).
+Dump de **846 types publics** de `TradingPlatform.BusinessLayer.dll` v1.146.14 via la console
+`poc/Phase0Poc` (modes `dump`/`type`). **Les 5 verdicts** :
+1. **MÊME CODE sim/réel (MESURÉ)** — le compte est un paramètre de la requête
+   (`OrderRequestParameters.Account`/`ConnectionId`, `AccountComplexIdentifier`) ; aucune API
+   parallèle pour le papier. La question d'ouverture du chantier est réglée.
+2. **Le Trading Simulator est PAYANT (DOC)** — absent de la version gratuite (Multi-Asset /
+   All-in-One 70 $/mois dégressif / pack Advanced Features) ; **MAIS l'API de stratégies est
+   GRATUITE** et un **essai 7 jours complet** existe → le POC tient dedans. ⚠️ La thèse du
+   site (« panneaux verrouillés, donnée ouverte ») ne se transpose PAS : un moteur licencié
+   n'est pas une donnée — contournement **exclu**.
+3. **Toute la checklist des specs existe dans l'API (MESURÉ)** : brackets `SlTpHolder`
+   (+`IsTrailing`), `ModifyOrder`/`AdjustStopLoss`, `CancelOrder`/`ClosePosition`, OCO
+   (`PlaceOrders(GroupOrderType.OCO)`), flat par compte (`CancelOrders(account)` +
+   `ClosePositions(account)`), événements complets (`TradeAdded`, `Order.Updated`,
+   `PartiallyFilled`…). Réserve : la dispo PAR CONNEXION (`Vendor.GetAllowedOrderTypes`) →
+   sonde « Ordres Probe (SIM) » spécifiée (§9, garde-fou : refuse tout compte non-Simulator).
+4. **Le Simulator émule par-dessus les connexions branchées (DOC)** → flux réel Rithmic,
+   même session, pas de conflit Apex. ⚠️ Chaque démarrage/arrêt du panneau = **compte NEUF**.
+5. **Où vit le stop : NON TRANCHÉ** — indice `Core.LocalOrders` (moteur d'ordres côté
+   plateforme). Sans gravité pour le POC ; **question de sécurité de la phase 5** → à poser
+   au support Quantower (gratuit).
+🪤 **Piège de build découvert** : la DLL v1.146.14 référence `System.Runtime 10.0.0.0` →
+toute nouvelle compile doit cibler **net10.0** (CS1705 sinon ; les DLL net8 déployées
+chargent encore). `Phase0Poc` compilé via `-p:TargetFramework=net10.0` (csproj inchangé).
+**Décisions utilisateur (même soir)** : **essai 7 jours RETENU** — ⚠️ à n'activer que quand
+la sonde et les stratégies seront prêtes à rouler (le compteur part au premier jour) ;
+**question des stops au support : STAND-BY**, à poser avant la phase 5. Ordre des travaux :
+volet C (jumeaux backtest) → code live + sonde → activer l'essai → semaine de POC.
+
+## 2026-07-19 — PIVOT : stratégies hybrides (volet A fait — les specs sont écrites)
+
+**Décision utilisateur : on n'automatise PAS les 8 stratégies du backtesting telles quelles.**
+Ce sont des artefacts de backtest (signal sur clôture, position tout-ou-rien, aucun ordre
+réellement placé) et le banc LEAN a rendu son verdict (pas d'edge démontré) : le pilier
+automatisation prouve la **chaîne d'exécution**, pas un edge. À la place, **3 stratégies
+HYBRIDES** = entrée simple empruntée au banc × vraie gestion d'ordres, **une par mécanique** :
+- **H1 ORB** (cassure de plage d'ouverture 09:30-10:00 ET) — market + **bracket SL/TP attaché** ;
+- **H2 SMA 9/21, 15 m** (tendance) — SL seul + **stop suiveur 2×ATR** = exerce la
+  *modification* d'ordres ;
+- **H3 RSI 9 (30/70), 3 m** (retour à la moyenne) — bracket complet + **annulation** sur RSI 50.
+
+Cadre commun : **NQ mini ×1**, stop **k×ATR14** / cible en **R**, une position à la fois,
+**règles Apex dès la conception** (entrées 09:30-15:30 ET, flat forcé 16:55 ET, garde-fou
+**2 pertes pleines → journée finie**, kill switch — défauts à confirmer). « Mode simulation »
+tranché par l'utilisateur = **compte papier (Simulator)**, pas le backtester. Specs complètes +
+checklist des mécanismes d'ordres à vérifier : [strategies-hybrides.md](strategies-hybrides.md).
+Cette checklist est l'ENTRÉE du volet B (étude Simulator — prompt
+`Claude_Code/Prompt_Automatisation_Hybrides.md`) ; question la plus lourde : **où vit le stop
+(serveur Rithmic vs plateforme)**. Les phases 4-5 du plan visent désormais ces 3 hybrides ;
+les 8 du banc restent intouchées dans leur pilier.
+
+**Précision utilisateur (même soir) — L'OBJECTIF DE TOUT LE PROJET = PREUVE DE CONCEPT ET DE
+FONCTIONNALITÉS, PAS LA RENTABILITÉ** (l'historique est trop court pour des backtests
+crédibles ; « l'automatisation n'a pas besoin d'être profitable, il faut avant tout créer de
+quoi qui fonctionne »). Specs resserrées en conséquence : **filtres de régime RETIRÉS**
+(SMA 48/SMA 50 — des features de performance, et les plus gros consommateurs d'historique),
+H2 passé en **5 m** (plus d'événements), **cooldowns 15 min** (les 45-60 min du banc étaient
+de l'anti-frais), **warm-up par seed `GetHistory`** (besoin réel ≈ 2 h de barres), et une
+section **« critère de succès »** ajoutée : chaque mécanisme (bracket, suiveur modifié,
+annulation, flat forcé, garde-fou, kill, redémarrage) observé au moins une fois dans le
+journal NDJSON. Un jour perdant qui déclenche proprement le garde-fou = un succès de test.
+
+**Ajout (même soir) — VOLET C : les 3 hybrides seront BACKTESTÉES dans le pilier
+Backtesting** (décision utilisateur ; nécessité structurelle : la phase 4 « shadow » compare
+le live au backtest — sans jumeau, rien à comparer). Rangement décidé : **à côté des 8** dans
+`backtesting/backtests/algorithms/` (`orb_nq.py`, `sma_suiveur_nq.py`, `rsi_bracket_nq.py`),
+patron `risque_stops_nq.py` (SL/TP/suiveur simulés dans la boucle 1 m), cadre de séance
+modélisé (09:30-15:30, flat 16:55, garde-fou), journal de décisions au même format NDJSON que
+le live (= la matière de la parité phase 4), fenêtre du banc 06-01→07-10 = **référence de
+décisions, pas verdict de perf**. **Séquence décidée : B (étude Simulator) → C (jumeaux) →
+code live.** Les 8 du banc ne bougent pas ; fiches site plus tard, question à poser avant.
+
 ## 2026-07-08 — Phase 3 démarrée : 1er indicateur (SMA Cross) + harnais de parité
 
 Phase visuelle → construction collaborative. API réfléchie : `Indicator`

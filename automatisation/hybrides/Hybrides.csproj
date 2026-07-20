@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- net10.0 OBLIGATOIRE : la DLL v1.146.14 référence System.Runtime 10.0.0.0
+         (CS1705 sinon — piège mesuré le 2026-07-19, voir docs/etude-simulator.md §8). -->
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Hybrides</AssemblyName>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+
+  <Target Name="CheckQuantowerBin" BeforeTargets="BeforeBuild">
+    <Error Condition="'$(QuantowerBin)' == '' Or !Exists('$(QuantowerBin)\TradingPlatform.BusinessLayer.dll')"
+           Text="QuantowerBin absent ou invalide. Compiler via deploy.ps1." />
+  </Target>
+
+  <ItemGroup>
+    <!-- Le banc de parité (console autonome) a SON csproj : hors de la DLL. -->
+    <Compile Remove="parite\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="TradingPlatform.BusinessLayer">
+      <HintPath>$(QuantowerBin)\TradingPlatform.BusinessLayer.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

@@ -1,5 +1,13 @@
 # Résumé — les phases & les stratégies de trading
 
+> **MAJ 2026-07-19 (pivot)** : les phases 4-5 ne porteront **pas** les 8 stratégies du
+> backtesting telles quelles — elles visent **3 stratégies hybrides** (entrées simples +
+> SL/TP en ordres attachés + cadre Apex), spécifiées dans
+> [strategies-hybrides.md](strategies-hybrides.md). Les 8 restent la référence du pilier
+> backtesting. **Objectif assumé : preuve de concept et de fonctionnalités, PAS la
+> rentabilité** (historique trop court pour des backtests crédibles). Détail du pivot :
+> [journal.md](journal.md), entrée 2026-07-19.
+
 > Vue d'ensemble en langage simple. Pour la distinction *indicateur/stratégie/Visual Studio*,
 > voir [guide-architecture-quantower.md](guide-architecture-quantower.md).
 

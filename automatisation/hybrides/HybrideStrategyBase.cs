@@ -1,0 +1,544 @@
+using System.Globalization;
+using TradingPlatform.BusinessLayer;
+
+namespace Hybrides;
+
+/// <summary>
+/// Base COMMUNE des 3 stratégies hybrides (H1 ORB / H2 SMA suiveur / H3 RSI bracket) —
+/// specs : automatisation/docs/strategies-hybrides.md ; jumeaux backtest : volet C
+/// (backtesting/backtests/algorithms/). MÊME code sim/réel : le compte est un PARAMÈTRE
+/// (verdict n°1 de l'étude Simulator) ; par défaut, seul un compte du Trading Simulator
+/// est accepté (« Autoriser un compte réel » = la porte de la phase 5, fermée d'origine).
+///
+/// Répartition des rôles avec le jumeau LEAN : le jumeau simule les brackets dans sa
+/// boucle 1 m ; ICI les SL/TP sont de VRAIS ordres attachés (SlTpHolder) — la plateforme
+/// (ou le serveur : question stand-by au support) exécute, nous, on décide et on journalise.
+/// Le journal NDJSON (même format que le jumeau) est la matière de la parité phase 4.
+///
+/// Flux de décision : seed d'indicateurs par GetHistory (barres 1 m), puis barres 1 m
+/// VIVANTES reconstruites depuis Symbol.NewLast (le flux trades prouvé par le pont NqFeed)
+/// — même règle d'agrégation 3/5 m que le jumeau. Le flat forcé tourne sur une HORLOGE
+/// murale (timer 10 s), pas sur les barres : un marché muet à 16:55 n'empêche pas le flat
+/// (trouvaille du volet C : les jours de clôture avancée, avancer le paramètre d'heure).
+///
+/// Pièges honorés (REPRISE) : InvariantCulture partout ; aucune I/O sur les threads de
+/// marché (journal = file bornée + thread) ; symbole vivant vérifié (State/TickSize) ;
+/// InstanceName et non Name pour étiqueter l'instance.
+/// </summary>
+public abstract class HybrideStrategyBase : Strategy
+{
+    protected static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
+
+    // --- Paramètres communs (indices 0-9 ; les stratégies filles continuent à 20+) ------
+    [InputParameter("Symbole (NQ front)", 0)]
+    public Symbol? Instrument { get; set; }
+
+    [InputParameter("Compte (Trading Simulator pour le POC)", 1)]
+    public Account? Compte { get; set; }
+
+    [InputParameter("Autoriser un compte réel (phase 5 SEULEMENT)", 2)]
+    public bool AutoriserCompteReel = false;
+
+    [InputParameter("Contrats", 3, 1, 10, 1, 0)]
+    public int Contrats = 1;
+
+    [InputParameter("Entrées à partir de (HH:mm ET)", 4)]
+    public string EntreesDebutEt = "09:30";
+
+    [InputParameter("Entrées jusqu'à (HH:mm ET)", 5)]
+    public string EntreesFinEt = "15:30";
+
+    [InputParameter("Flat forcé à (HH:mm ET — AVANCER les jours de clôture avancée)", 6)]
+    public string HeureFlatEt = "16:55";
+
+    [InputParameter("Garde-fou : pertes pleines par jour", 7, 1, 10, 1, 0)]
+    public int PertesMax = 2;
+
+    [InputParameter("Cooldown après sortie (minutes)", 8, 0, 120, 1, 0)]
+    public int CooldownMin = 15;
+
+    [InputParameter("Seed d'historique (heures de barres 1 m)", 9, 2, 168, 1, 0)]
+    public int SeedHeures = 48;
+
+    [InputParameter("Dossier des journaux NDJSON", 10)]
+    public string JournalDossier = @"H:\IndicesBoursiers\automatisation\journaux";
+
+    // --- Identité de la stratégie fille -------------------------------------------------
+    /// <summary>Slug du journal (= nom du dossier), aligné sur le jumeau LEAN.</summary>
+    protected abstract string Slug { get; }
+
+    /// <summary>Une barre 1 m vient de fermer (seed PUIS live, dans l'ordre). Les filles y
+    /// font tout : agrégation TF, indicateurs, décisions (via les helpers de la base).</summary>
+    protected abstract void SurBarre1m(in Barre1m barre);
+
+    /// <summary>La position vient d'ouvrir (fill confirmé).</summary>
+    protected virtual void SurPositionOuverte(Position p) { }
+
+    /// <summary>La position vient de fermer (raison : SL | TP | SIGNAL | FLAT | KILL | AUTRE).</summary>
+    protected virtual void SurPositionFermee(string raison) { }
+
+    /// <summary>Une sortie sur stop est-elle une PERTE PLEINE (garde-fou) ? Défaut : tout
+    /// SL touché. H2 (stop suiveur) affine : seulement si le fill est du côté perdant.</summary>
+    protected virtual bool EstPertePleine(string raison, double prixSortie) => raison == "SL";
+
+    // --- État interne -------------------------------------------------------------------
+    protected readonly object Verrou = new();
+    protected CadreSeance Cadre = null!;
+    private JournalNdjson _journal = null!;
+    private System.Threading.Timer? _horloge;
+    private bool _demarre;
+    private bool _enSeed;
+    private string _idTypeMarket = "";
+
+    private Barre1m? _barreEnCours;
+    private DateTime _derniereOuvertureTraitee = DateTime.MinValue;
+    private DateTime _dernierTradeVuUtc = DateTime.MinValue;
+    protected double DernierClose { get; private set; } = double.NaN;
+
+    protected Position? PositionCourante { get; private set; }
+    protected double PrixEntree { get; private set; } = double.NaN;
+    protected Side SensPosition { get; private set; }
+    private bool _entreeEnCours;
+    private bool _sortieEnCours;
+    private string _raisonSortie = "";
+    private string? _idOrdreEntree, _idOrdreSl, _idOrdreTp;
+    private string? _dernierOrdreFille;
+    private int _slTicksAttente, _tpTicksAttente;
+    private (string cle, double valeur)[] _indicateursEntree = Array.Empty<(string, double)>();
+
+    protected bool EnPosition => PositionCourante is not null;
+    protected bool SortieEnCours => _sortieEnCours;
+
+    // ======================================================================== DÉMARRAGE =
+    protected override void OnRun()
+    {
+        try { Demarrer(); }
+        catch (Exception ex)
+        {
+            this.LogError($"Démarrage impossible : {ex}");
+            this.Stop();
+        }
+    }
+
+    private void Demarrer()
+    {
+        var s = Instrument;
+        if (s is null) { this.LogError("Aucun symbole sélectionné (choisir NQ front)."); this.Stop(); return; }
+        if (Compte is null) { this.LogError("Aucun compte sélectionné."); this.Stop(); return; }
+
+        // Symbole vivant (piège du pont NqFeed : un symbole résolu n'est pas un symbole vivant).
+        if (s.State == BusinessObjectState.Fake || double.IsNaN(s.TickSize) || s.TickSize <= 0)
+        {
+            this.LogError($"{s.Name} : symbole SANS FLUX (State={s.State}, TickSize={s.TickSize.ToString(Inv)}). "
+                        + "Connecter Rithmic dans Quantower, PUIS relancer.");
+            this.Stop();
+            return;
+        }
+
+        // GARDE ANTI-COMPTE-RÉEL : jamais d'ordre hors Simulator tant que la phase 5 n'a pas
+        // explicitement ouvert la porte (paramètre). Le type de connexion fait foi.
+        var typeConn = Compte.Connection?.Type;
+        if (typeConn != ConnectionType.TradingSimulator && !AutoriserCompteReel)
+        {
+            this.LogError($"Compte « {Compte.Name} » sur une connexion {typeConn?.ToString() ?? "?"} : "
+                        + "REFUSÉ. Ces stratégies ne tradent que le Trading Simulator tant que "
+                        + "« Autoriser un compte réel » (phase 5) n'est pas coché.");
+            this.Stop();
+            return;
+        }
+
+        // Type d'ordre MARKET servi par la connexion du symbole (jamais un id deviné).
+        var market = s.GetAlowedOrderTypes(OrderTypeUsage.Order)?
+            .FirstOrDefault(t => t.Behavior == OrderTypeBehavior.Market);
+        if (market is null)
+        {
+            this.LogError("La connexion ne sert pas d'ordre MARKET pour ce symbole (GetAlowedOrderTypes).");
+            this.Stop();
+            return;
+        }
+        _idTypeMarket = market.Id;
+
+        Cadre = new CadreSeance(EntreesDebutEt, EntreesFinEt, HeureFlatEt, PertesMax, CooldownMin);
+        _journal = new JournalNdjson(JournalDossier, Slug, s.Root ?? s.Name, m => this.LogError(m));
+        InstanceName = $"{Name} — {s.Name} @ {Compte.Name}";
+
+        this.LogInfo($"{Name} | {s.Name} (tick {s.TickSize.ToString(Inv)}) | compte {Compte.Name} "
+                   + $"({typeConn}) | entrées {EntreesDebutEt}-{EntreesFinEt} ET | flat {HeureFlatEt} ET | "
+                   + $"garde-fou {PertesMax} | cooldown {CooldownMin} m | journal : {_journal.Dossier}");
+        Journal("demarrage", raison: $"compte {Compte.Name} ({typeConn}), flat {HeureFlatEt} ET");
+
+        // SEED : les indicateurs s'amorcent sur l'historique 1 m (jamais « attendre que ça
+        // chauffe » en séance — spec). Le même chemin SurBarre1m que le live, ordres coupés.
+        _enSeed = true;
+        int barres = 0;
+        HistoricalData? hd = null;
+        try
+        {
+            var de = DateTime.UtcNow.AddHours(-SeedHeures);
+            hd = s.GetHistory(new Period(BasePeriod.Minute, 1), HistoryType.Last, de, DateTime.UtcNow);
+            if (hd is not null)
+                foreach (var brut in hd)
+                {
+                    if (brut is not HistoryItemBar b) continue;
+                    var ouverture = ToUtc(b.TimeLeft);
+                    SurBarre1m(new Barre1m(ouverture, b.Open, b.High, b.Low, b.Close));
+                    _derniereOuvertureTraitee = ouverture;
+                    barres++;
+                }
+        }
+        finally { hd?.Dispose(); _enSeed = false; }
+        this.LogInfo($"Seed : {barres} barres 1 m relues ({SeedHeures} h demandées).");
+
+        // Événements de la plateforme : fills, positions, et le flux trades (barres vivantes).
+        Core.Instance.TradeAdded += SurTrade;
+        Core.Instance.PositionAdded += SurPositionAjoutee;
+        Core.Instance.PositionRemoved += SurPositionRetiree;
+        s.NewLast += SurNouveauTrade;
+
+        // L'horloge murale : flat forcé + ré-armement du garde-fou + détection de flux gelé.
+        _horloge = new System.Threading.Timer(_ => TicHorloge(), null,
+                                              TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+        _demarre = true;
+    }
+
+    // ============================================================================ ARRÊT =
+    protected override void OnStop()
+    {
+        if (!_demarre) return;
+        _demarre = false;
+        _horloge?.Dispose(); _horloge = null;
+
+        if (Instrument is { } s) s.NewLast -= SurNouveauTrade;
+        Core.Instance.TradeAdded -= SurTrade;
+        Core.Instance.PositionAdded -= SurPositionAjoutee;
+        Core.Instance.PositionRemoved -= SurPositionRetiree;
+
+        // KILL SWITCH (spec) : l'arrêt de la stratégie = tout annuler + liquider.
+        lock (Verrou)
+        {
+            if (PositionCourante is not null || DesOrdresVivants())
+            {
+                _sortieEnCours = true;
+                _raisonSortie = "KILL";
+                Journal("kill", prix: DernierClose, raison: "arrêt de la stratégie : tout annuler + liquider");
+                var r = Core.Instance.AdvancedTradingOperations.Flatten(Instrument, Compte, null);
+                this.LogInfo($"Kill switch : Flatten → {r?.ToString() ?? "?"}");
+            }
+        }
+        Journal("arret", raison: $"lignes jetées journal : {_journal.LignesJetees.ToString(Inv)}");
+        _journal.Dispose();
+        this.LogInfo("Stratégie arrêtée proprement.");
+    }
+
+    // ================================================================== BARRES VIVANTES =
+    /// <summary>Reconstruit les barres 1 m depuis le flux trades — même matière première que
+    /// l'extracteur/le CSV des jumeaux (une minute sans trade = pas de barre, comme en base).</summary>
+    private void SurNouveauTrade(Symbol symbole, Last trade)
+    {
+        if (trade.Size <= 0) return;
+        var t = ToUtc(trade.Time);
+        var ouverture = new DateTime(t.Year, t.Month, t.Day, t.Hour, t.Minute, 0, DateTimeKind.Utc);
+        lock (Verrou)
+        {
+            _dernierTradeVuUtc = DateTime.UtcNow;
+            if (_barreEnCours is { } b)
+            {
+                if (ouverture > b.OuvertureUtc)
+                {
+                    // La barre précédente vient de fermer (si le seed ne l'a pas déjà couverte).
+                    if (b.OuvertureUtc > _derniereOuvertureTraitee)
+                    {
+                        _derniereOuvertureTraitee = b.OuvertureUtc;
+                        DernierClose = b.Close;
+                        SurBarre1m(b);
+                    }
+                    _barreEnCours = new Barre1m(ouverture, trade.Price, trade.Price, trade.Price, trade.Price);
+                }
+                else
+                {
+                    _barreEnCours = b with
+                    {
+                        High = Math.Max(b.High, trade.Price),
+                        Low = Math.Min(b.Low, trade.Price),
+                        Close = trade.Price,
+                    };
+                }
+            }
+            else if (ouverture > _derniereOuvertureTraitee)
+            {
+                _barreEnCours = new Barre1m(ouverture, trade.Price, trade.Price, trade.Price, trade.Price);
+            }
+        }
+    }
+
+    // ======================================================================== L'HORLOGE =
+    private void TicHorloge()
+    {
+        try
+        {
+            lock (Verrou)
+            {
+                var (jourEt, minutes) = CadreSeance.HeureEt(DateTime.UtcNow);
+                Cadre.MajJour(jourEt, minutes);
+
+                // Flux gelé pendant la séance (piège 17) : aucune nouvelle entrée.
+                if (_dernierTradeVuUtc != DateTime.MinValue
+                    && minutes >= Cadre.EntreeDebut && minutes < Cadre.FlatForce
+                    && (DateTime.UtcNow - _dernierTradeVuUtc).TotalMinutes > 5)
+                    this.LogInfo("⚠️ Aucun trade reçu depuis > 5 min en pleine séance : flux suspect, "
+                               + "les entrées sont bloquées de fait (pas de barre = pas de signal).");
+
+                // FLAT FORCÉ à l'horloge murale — indépendant des barres.
+                if (minutes >= Cadre.FlatForce && !_sortieEnCours
+                    && (PositionCourante is not null || DesOrdresVivants()))
+                {
+                    Journal("annulation", idOrdre: IdBracket(), raison: "flat forcé : bracket annulé");
+                    _sortieEnCours = true;
+                    _raisonSortie = "FLAT";
+                    Journal("flat_force", prix: DernierClose,
+                            raison: $"flat forcé {HeureFlatEt} ET : tout annuler + liquider");
+                    var r = Core.Instance.AdvancedTradingOperations.Flatten(Instrument, Compte, null);
+                    if (r is not null) this.LogInfo($"Flat forcé : Flatten → {r}");
+                }
+            }
+        }
+        catch (Exception ex) { this.LogError($"Horloge : {ex.Message}"); }
+    }
+
+    // ============================================================= HELPERS DE DÉCISION =
+    /// <summary>null si une entrée est permise à la clôture de cette barre ; sinon la raison
+    /// du refus (journalisée par la fille — même vocabulaire que le jumeau).</summary>
+    protected string? RaisonRefus(DateTime finBarreUtc)
+    {
+        if (_enSeed) return "seed";
+        var (_, m) = CadreSeance.HeureEt(finBarreUtc);
+        if (m <= Cadre.EntreeDebut || m > Cadre.EntreeFin)
+            return $"hors fenêtre d'entrée ({EntreesDebutEt}-{EntreesFinEt} ET)";
+        if (Cadre.GardeFou) return "garde-fou journalier actif";
+        if (!Cadre.CooldownOk(finBarreUtc)) return $"cooldown {CooldownMin.ToString(Inv)} min";
+        if (PositionCourante is not null || _entreeEnCours || _sortieEnCours) return "déjà en position";
+        return null;
+    }
+
+    /// <summary>Entrée market ×Contrats avec bracket ATTACHÉ (offsets en ticks depuis le
+    /// fill — la sémantique mesurée de SlTpHolder ; tpTicks = 0 → pas de TP, patron H2).</summary>
+    protected void EnvoyerEntree(DateTime tsUtc, Side sens, double prixDecision,
+                                 int slTicks, int tpTicks,
+                                 (string cle, double valeur)[] indicateurs)
+    {
+        if (_enSeed || Instrument is null || Compte is null) return;
+        _slTicksAttente = slTicks;
+        _tpTicksAttente = tpTicks;
+        _indicateursEntree = indicateurs;
+
+        var requete = new PlaceOrderRequestParameters
+        {
+            Account = Compte,
+            Symbol = Instrument,
+            Side = sens,
+            OrderTypeId = _idTypeMarket,
+            Quantity = Contrats,
+            TimeInForce = TimeInForce.Day,
+            StopLoss = SlTpHolder.CreateSL(slTicks, PriceMeasurement.Offset),
+        };
+        if (tpTicks > 0)
+            requete.TakeProfit = SlTpHolder.CreateTP(tpTicks, PriceMeasurement.Offset);
+
+        _entreeEnCours = true;
+        SensPosition = sens;
+        Journal("entree_envoyee", prix: prixDecision, qte: sens == Side.Buy ? Contrats : -Contrats,
+                raison: $"market ×{Contrats.ToString(Inv)} + SL {slTicks.ToString(Inv)} ticks"
+                      + (tpTicks > 0 ? $" / TP {tpTicks.ToString(Inv)} ticks" : " (pas de TP)"));
+        var r = Core.Instance.PlaceOrder(requete);
+        if (r.Status == TradingOperationResultStatus.Failure)
+        {
+            _entreeEnCours = false;
+            Journal("annulation", raison: $"entrée REFUSÉE par la plateforme : {r.Message}");
+            this.LogError($"PlaceOrder REFUSÉ : {r.Message}");
+            return;
+        }
+        _idOrdreEntree = r.OrderId;
+        this.LogInfo($"ENTRÉE {sens} envoyée (ordre {r.OrderId}) @ ~{prixDecision.ToString(Inv)}");
+    }
+
+    /// <summary>Sortie sur SIGNAL : annule le bracket (mécanisme n°3 des specs, ordre par
+    /// ordre) puis ferme la position au market. Le fill arrivera par TradeAdded.</summary>
+    protected void EnvoyerSortieSignal(DateTime tsUtc, string raisonTexte)
+    {
+        var p = PositionCourante;
+        if (p is null || _sortieEnCours) return;
+        _sortieEnCours = true;
+        _raisonSortie = "SIGNAL";
+        Journal("annulation", idOrdre: IdBracket(), raison: $"sortie signal : bracket annulé ({raisonTexte})");
+        ResoudreOrdresLies();
+        AnnulerSiVivant(_idOrdreSl);
+        AnnulerSiVivant(_idOrdreTp);
+        Journal("sortie_envoyee", prix: DernierClose,
+                qte: p.Side == Side.Buy ? -p.Quantity : p.Quantity, idOrdre: p.Id, raison: raisonTexte);
+        var r = p.Close();
+        if (r?.Status == TradingOperationResultStatus.Failure)
+            this.LogError($"ClosePosition REFUSÉ : {r.Message} (le flat de {HeureFlatEt} ET rattrapera)");
+    }
+
+    /// <summary>H2 : MODIFICATION du prix de déclenchement du stop existant (mécanisme n°2).
+    /// Renvoie true si la plateforme a accepté.</summary>
+    protected bool ModifierStop(DateTime tsUtc, double nouveauPrix,
+                                (string cle, double valeur)[] indicateurs)
+    {
+        ResoudreOrdresLies();
+        var ordre = TrouverOrdre(_idOrdreSl);
+        if (ordre is null)
+        {
+            this.LogInfo("Stop introuvable pour modification (bracket pas encore visible ?) — retenté à la prochaine barre.");
+            return false;
+        }
+        var requete = new ModifyOrderRequestParameters(ordre) { TriggerPrice = nouveauPrix };
+        var r = Core.Instance.ModifyOrder(requete);
+        if (r.Status == TradingOperationResultStatus.Failure)
+        {
+            this.LogError($"ModifyOrder REFUSÉ : {r.Message}");
+            return false;
+        }
+        Journal("stop_modifie", prix: nouveauPrix, idOrdre: ordre.Id, raison: "suiveur", indicateurs: indicateurs);
+        return true;
+    }
+
+    /// <summary>Journalise un événement (enfilage non bloquant, format jumeau).</summary>
+    protected void Journal(string evenement, double? prix = null, double? qte = null,
+                           string? idOrdre = null, string raison = "",
+                           params (string cle, double valeur)[] indicateurs)
+        => _journal.Ecrire(DateTime.UtcNow, evenement, prix, qte, idOrdre, raison, indicateurs);
+
+    // ================================================== ÉVÉNEMENTS DE LA PLATEFORME ====
+    private void SurPositionAjoutee(Position p)
+    {
+        if (!EstANous(p.Account) || !EstNotreSymbole(p.Symbol)) return;
+        lock (Verrou)
+        {
+            PositionCourante = p;
+            PrixEntree = p.OpenPrice;
+            SensPosition = p.Side;
+            _entreeEnCours = false;
+            ResoudreOrdresLies();
+
+            double tick = Instrument!.TickSize;
+            double sl = p.Side == Side.Buy ? p.OpenPrice - _slTicksAttente * tick
+                                           : p.OpenPrice + _slTicksAttente * tick;
+            var indic = new List<(string, double)>(_indicateursEntree) { ("stop", sl) };
+            if (_tpTicksAttente > 0)
+                indic.Add(("take", p.Side == Side.Buy ? p.OpenPrice + _tpTicksAttente * tick
+                                                      : p.OpenPrice - _tpTicksAttente * tick));
+            Journal("bracket_pose", prix: p.OpenPrice, idOrdre: IdBracket(),
+                    raison: $"bracket attaché au fill (SL {_slTicksAttente.ToString(Inv)} ticks"
+                          + (_tpTicksAttente > 0 ? $", TP {_tpTicksAttente.ToString(Inv)} ticks)" : ", pas de TP)"),
+                    indicateurs: indic.ToArray());
+            this.LogInfo($"POSITION ouverte {p.Side} @ {p.OpenPrice.ToString(Inv)} (id {p.Id})");
+            SurPositionOuverte(p);
+        }
+    }
+
+    private void SurPositionRetiree(Position p)
+    {
+        if (!EstANous(p.Account) || !EstNotreSymbole(p.Symbol)) return;
+        lock (Verrou)
+        {
+            if (PositionCourante is null) return;
+            string raison = _sortieEnCours ? _raisonSortie
+                : _dernierOrdreFille == _idOrdreSl && _idOrdreSl is not null ? "SL"
+                : _dernierOrdreFille == _idOrdreTp && _idOrdreTp is not null ? "TP"
+                : "AUTRE";
+            double prixSortie = p.CurrentPrice;
+            bool pertePleine = (raison is "SL" or "AUTRE") && EstPertePleine("SL", prixSortie);
+            if (raison == "AUTRE")
+                this.LogInfo("Position fermée sans intention connue (SL/TP non identifié) — "
+                           + "comptée prudemment via EstPertePleine.");
+
+            var maintenant = DateTime.UtcNow;
+            if (Cadre.Sortie(maintenant, pertePleine))
+                Journal("garde_fou",
+                        raison: $"{PertesMax.ToString(Inv)} pertes pleines — arrêt jusqu'à {EntreesDebutEt} ET");
+            this.LogInfo($"POSITION fermée [{raison}]{(pertePleine ? " (perte pleine)" : "")}");
+
+            PositionCourante = null;
+            PrixEntree = double.NaN;
+            _idOrdreEntree = _idOrdreSl = _idOrdreTp = null;
+            _sortieEnCours = false;
+            SurPositionFermee(raison);
+        }
+    }
+
+    private void SurTrade(Trade t)
+    {
+        if (!EstANous(t.Account) || !EstNotreSymbole(t.Symbol)) return;
+        lock (Verrou)
+        {
+            _dernierOrdreFille = t.OrderId;
+            string raison = t.OrderId == _idOrdreEntree ? "fill d'entrée"
+                : t.OrderId == _idOrdreSl ? "fill de sortie [SL]"
+                : t.OrderId == _idOrdreTp ? "fill de sortie [TP]"
+                : _sortieEnCours ? $"fill de sortie [{_raisonSortie}]"
+                : "fill";
+            Journal("fill", prix: t.Price,
+                    qte: t.Side == Side.Buy ? t.Quantity : -t.Quantity,
+                    idOrdre: t.OrderId, raison: raison);
+        }
+    }
+
+    // ============================================================== PETITE PLOMBERIE ===
+    private bool EstANous(Account? a) =>
+        a is not null && Compte is not null && a.Id == Compte.Id && a.ConnectionId == Compte.ConnectionId;
+
+    private bool EstNotreSymbole(Symbol? s) => s is not null && Instrument is not null && s.Id == Instrument.Id;
+
+    /// <summary>Les SL/TP attachés apparaissent comme des ordres liés à la position — on les
+    /// retrouve par PositionId (ils ne sont pas forcément visibles à l'instant du fill).</summary>
+    private void ResoudreOrdresLies()
+    {
+        var p = PositionCourante;
+        if (p is null || (_idOrdreSl is not null && _idOrdreTp is not null)) return;
+        foreach (var o in Core.Instance.Orders)
+        {
+            if (o.PositionId != p.Id || !EstANous(o.Account)) continue;
+            var comportement = o.OrderType?.Behavior;
+            if (comportement is OrderTypeBehavior.Stop or OrderTypeBehavior.StopLimit or OrderTypeBehavior.TrailingStop)
+                _idOrdreSl ??= o.Id;
+            else if (comportement is OrderTypeBehavior.Limit)
+                _idOrdreTp ??= o.Id;
+        }
+        var sl = TrouverOrdre(_idOrdreSl);
+        if (sl is not null && PositionCourante is not null && double.IsNaN(StopCourantPlateforme))
+            StopCourantPlateforme = sl.TriggerPrice;
+    }
+
+    /// <summary>Dernier prix de déclenchement CONNU du stop attaché (NaN si pas encore vu).</summary>
+    protected double StopCourantPlateforme { get; set; } = double.NaN;
+
+    protected Order? TrouverOrdre(string? id) =>
+        id is null ? null : Core.Instance.Orders.FirstOrDefault(o => o.Id == id);
+
+    private void AnnulerSiVivant(string? id)
+    {
+        var o = TrouverOrdre(id);
+        if (o is null || o.Status is OrderStatus.Cancelled or OrderStatus.Filled or OrderStatus.Refused) return;
+        var r = o.Cancel(null);
+        if (r?.Status == TradingOperationResultStatus.Failure)
+            this.LogError($"CancelOrder {id} REFUSÉ : {r.Message}");
+    }
+
+    private bool DesOrdresVivants() =>
+        Core.Instance.Orders.Any(o => EstANous(o.Account) && EstNotreSymbole(o.Symbol)
+                                      && o.Status is OrderStatus.Opened or OrderStatus.PartiallyFilled);
+
+    private string IdBracket() =>
+        _idOrdreSl is null && _idOrdreTp is null ? (_idOrdreEntree ?? "?") + "-bracket"
+            : $"{_idOrdreSl ?? "-"}/{_idOrdreTp ?? "-"}";
+
+    protected static DateTime ToUtc(DateTime t) => t.Kind == DateTimeKind.Utc ? t : t.ToUniversalTime();
+
+    /// <summary>Points → ticks entiers (au moins 1), pour les offsets de bracket.</summary>
+    protected int EnTicks(double points)
+    {
+        double tick = Instrument?.TickSize is { } ts && ts > 0 ? ts : 0.25;
+        return Math.Max(1, (int)Math.Round(points / tick));
+    }
+}
