@@ -10,6 +10,8 @@ obj/
 *.user
 
 # Binaires & données volumineuses (régénérables)
+journaux/
+parite_csharp.csv
 *.dll
 *.exe
 *.pdb
