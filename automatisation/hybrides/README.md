@@ -18,9 +18,15 @@ panneau Strategies :
 | `SmaAnnuleHybride` | Hybride H3 SMA Annulation (NQ) | bracket SL 1,5×ATR / TP 2R, **annulé** au croisement inverse | l'**annulation** | `sma_annule_nq.py` |
 | `OrdresProbe` | Ordres Probe (SIM) | (sonde, hors déclencheur commun) | le cycle de vie des ordres (étude §9) | — |
 
-Cadre commun : entrées 09:30-15:30 ET, flat 16:55 ET, cooldown 2 min, garde-fou **désactivé
-par défaut** (`Garde-fou = 0` en test), ATR14 sur 1 m. Fréquence obtenue au banc
-(~28 séances) : H1 442 entrées, H2 476 (stop modifié 3183×), H3 421 (111 annulations).
+Cadre commun : cooldown 2 min, garde-fou **désactivé par défaut** (`Garde-fou = 0` en test),
+ATR14 sur 1 m. **Séance : « Restreindre à la séance NY » est DÉCOCHÉ par défaut = mode 24 h**
+(entrées quand le marché est ouvert, y compris le soir dès 18:00 ET, et PAS de flat de
+séance) — pour tester/observer à toute heure. Le RE-COCHER pour la réalité prop firm
+(entrées 09:30-15:30 ET, flat 16:55 ET), surtout en CONFIRMATION/AUTO sur compte réel. Le
+même interrupteur existe sur l'indicateur visuel. ⚠️ Pour une comparaison de parité avec le
+jumeau LEAN (phase 4), régler la séance PAREIL des deux côtés (le jumeau est bridé séance NY).
+Fréquence obtenue au banc (~28 séances, séance NY) : H1 442 entrées, H2 476 (stop modifié
+3183×), H3 421 (111 annulations).
 
 ## Les TROIS modes d'exécution (paramètre « Mode d'exécution »)
 

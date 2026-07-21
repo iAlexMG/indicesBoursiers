@@ -44,6 +44,11 @@ public sealed class SmaBracketVisuelIndicator : Indicator
     [InputParameter("Cooldown après sortie (minutes)", 8, 0, 120, 1, 0)]
     public int CooldownMin = 2;
 
+    // Décoché (défaut) = 24 h : cassures dessinées quand le marché est ouvert (aussi le
+    // soir), sans fenêtre ni flat de séance — pour observer le graphe à toute heure.
+    [InputParameter("Restreindre à la séance NY (décoché = 24 h)", 9)]
+    public bool SeanceNY = false;
+
     private const int LRapide = 0, LLente = 1, LSl = 2, LTp = 3, LMarqueurs = 4;
 
     private DeclencheurSmaCross _cross = null!;
@@ -116,12 +121,12 @@ public sealed class SmaBracketVisuelIndicator : Indicator
                 Sortir(offset, finUtc, Color.Red);
             else if ((_sens > 0 && haut >= _take) || (_sens < 0 && bas <= _take))
                 Sortir(offset, finUtc, Color.LimeGreen);
-            else if (m >= _flat)
+            else if (SeanceNY && m >= _flat)
                 Sortir(offset, finUtc, Color.Orange);
         }
-        // 2) ENTRÉE sur croisement (flat + fenêtre + cooldown + ATR prêt).
-        else if (_cross.Croisement != 0 && _atr.Pret && m > _debut && m <= _fin
-                 && CooldownOk(finUtc))
+        // 2) ENTRÉE sur croisement (flat + fenêtre[si séance NY] + cooldown + ATR prêt).
+        else if (_cross.Croisement != 0 && _atr.Pret && CooldownOk(finUtc)
+                 && (!SeanceNY || (m > _debut && m <= _fin)))
         {
             _sens = _cross.Croisement;
             double r = StopMult * _atr.Valeur;

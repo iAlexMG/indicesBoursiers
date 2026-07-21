@@ -73,6 +73,13 @@ public abstract class HybrideStrategyBase : Strategy
     [InputParameter("Flat forcé à (HH:mm ET — AVANCER les jours de clôture avancée)", 6)]
     public string HeureFlatEt = "16:55";
 
+    // Décoché (défaut) = 24 h : entrées permises quand le marché est ouvert (donc aussi le
+    // soir, l'« Asia » CME ouvre 18:00 ET), et PAS de flat forcé de séance. C'est le mode
+    // pour tester/observer librement. Le RE-COCHER pour la réalité prop firm (séance NY +
+    // flat 16:55) — surtout en CONFIRMATION/AUTO sur compte réel.
+    [InputParameter("Restreindre à la séance NY (décoché = 24 h)", 13)]
+    public bool SeanceNY = false;
+
     [InputParameter("Garde-fou : pertes pleines/jour (0 = désactivé)", 7, 0, 10, 1, 0)]
     public int PertesMax = 0;      // 0 en phase de test : ne pas brider les signaux
 
@@ -213,10 +220,12 @@ public abstract class HybrideStrategyBase : Strategy
         _journal = new JournalNdjson(JournalDossier, Slug, s.Root ?? s.Name, m => this.LogError(m));
         InstanceName = $"{Name} — {s.Name} @ {etiquetteCompte}";
 
+        string seance = SeanceNY
+            ? $"séance NY (entrées {EntreesDebutEt}-{EntreesFinEt} ET, flat {HeureFlatEt} ET)"
+            : "24 h (pas de fenêtre ni de flat de séance)";
         this.LogInfo($"{Name} | {s.Name} (tick {s.TickSize.ToString(Inv)}) | {etiquetteCompte} | "
-                   + $"entrées {EntreesDebutEt}-{EntreesFinEt} ET | flat {HeureFlatEt} ET | "
-                   + $"garde-fou {PertesMax} | cooldown {CooldownMin} m | journal : {_journal.Dossier}");
-        Journal("demarrage", raison: $"{etiquetteCompte}, flat {HeureFlatEt} ET");
+                   + $"{seance} | garde-fou {PertesMax} | cooldown {CooldownMin} m | journal : {_journal.Dossier}");
+        Journal("demarrage", raison: $"{etiquetteCompte} — {seance}");
 
         // SEED : les indicateurs s'amorcent sur l'historique 1 m (jamais « attendre que ça
         // chauffe » en séance — spec). Le même chemin SurBarre1m que le live, ordres coupés.
@@ -493,6 +502,10 @@ public abstract class HybrideStrategyBase : Strategy
 
                 ExpirerProposition();
 
+                // 24 h (séance NY décochée) : pas de flat forcé de séance — on tient la
+                // position jusqu'à un SL/TP/signal ou le kill switch manuel.
+                if (!SeanceNY) return;
+
                 // FLAT FORCÉ à l'horloge murale — indépendant des barres.
                 if (EnShadow)
                 {
@@ -555,9 +568,12 @@ public abstract class HybrideStrategyBase : Strategy
         // journalisés — ils expliquent pourquoi un croisement n'a PAS été pris.
         if (_enSeed) return "seed";
         if (EnPosition || _entreeEnCours || _shadowEntreeAttendue || SortieEnCours) return "en_position";
-        var (_, m) = CadreSeance.HeureEt(finBarreUtc);
-        if (m <= Cadre.EntreeDebut || m > Cadre.EntreeFin)
-            return $"hors fenêtre d'entrée ({EntreesDebutEt}-{EntreesFinEt} ET)";
+        if (SeanceNY)      // 24 h si décoché : pas de fenêtre d'entrée
+        {
+            var (_, m) = CadreSeance.HeureEt(finBarreUtc);
+            if (m <= Cadre.EntreeDebut || m > Cadre.EntreeFin)
+                return $"hors fenêtre d'entrée ({EntreesDebutEt}-{EntreesFinEt} ET)";
+        }
         if (Cadre.GardeFou) return "garde-fou journalier actif";
         if (!Cadre.CooldownOk(finBarreUtc)) return $"cooldown {CooldownMin.ToString(Inv)} min";
         return null;

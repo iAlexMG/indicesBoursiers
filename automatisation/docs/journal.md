@@ -1,5 +1,19 @@
 # Journal du projet — décisions datées & mesures clés
 
+## 2026-07-20 (soir) — MODE 24 H : interrupteur « Restreindre à la séance NY »
+
+Demande utilisateur : les horaires de séance NY sont trop contraignants pour tester ; il
+veut essayer les stratégies/indicateurs **après 18:00 en semaine** (le NQ tourne quasi
+24 h — l'« Asia » CME ouvre à 18:00 ET). Deux verrous l'en empêchaient : la fenêtre
+d'entrée 09:30-15:30 ET, et le flat forcé qui, passé 16:55, se déclenche en continu tout
+le soir. **Ajout d'un booléen `Restreindre à la séance NY` (DÉCOCHÉ par défaut = 24 h)** sur
+la base des stratégies ET sur l'indicateur `SmaBracketVisuel` : décoché → entrées permises
+quand le marché est ouvert, aucune fenêtre, aucun flat de séance (kill switch et SL/TP
+restent). Coché → comportement prop firm (fenêtre + flat 16:55). Le mode est journalisé au
+`demarrage`. Défaut 24 h car phase de test en SHADOW ; à RE-COCHER pour la réalité Apex en
+CONFIRMATION/AUTO. ⚠️ Parité phase 4 : régler la séance pareil côté jumeau (bridé séance).
+Compile 0/0, DLL + visuel redéployés.
+
 ## 2026-07-20 — REFONTE des 3 stratégies : DÉCLENCHEUR COMMUN (fréquence des signaux)
 
 **Constat utilisateur après le 1er test live de H1** : lancée à 14:22 ET (hors fenêtre
