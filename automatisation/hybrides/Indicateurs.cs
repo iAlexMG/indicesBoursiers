@@ -116,3 +116,42 @@ internal sealed class AggregateurBarres
         return barre;
     }
 }
+
+/// <summary>
+/// Le DÉCLENCHEUR COMMUN des 3 hybrides (refonte 2026-07-20) : croisement de deux SMA sur
+/// closes 1 m. `Ajouter(close)` par barre 1 m fermée, puis lire `Croisement` : +1 haussier
+/// (la rapide passe au-dessus de la lente), -1 baissier, 0 pas de croisement à cette barre.
+/// Une SEULE implémentation partagée par H1/H2/H3 et le visuel — elles ne diffèrent que par
+/// la gestion d'ordre, jamais par l'entrée. Le jumeau LEAN reproduit la même règle (parité).
+/// </summary>
+internal sealed class DeclencheurSmaCross
+{
+    private readonly Sma _rapide, _lente;
+    private double _diffPrec = double.NaN;
+
+    public DeclencheurSmaCross(int rapide, int lente)
+    {
+        _rapide = new Sma(rapide);
+        _lente = new Sma(lente);
+    }
+
+    public int Croisement { get; private set; }
+    public double Rapide => _rapide.Valeur;
+    public double Lente => _lente.Valeur;
+    public bool Pret => _rapide.Prete && _lente.Prete;
+
+    public void Ajouter(double close)
+    {
+        _rapide.Ajouter(close);
+        _lente.Ajouter(close);
+        Croisement = 0;
+        if (!Pret) return;
+        double diff = _rapide.Valeur - _lente.Valeur;
+        if (!double.IsNaN(_diffPrec))
+        {
+            if (_diffPrec <= 0 && diff > 0) Croisement = 1;
+            else if (_diffPrec >= 0 && diff < 0) Croisement = -1;
+        }
+        _diffPrec = diff;
+    }
+}

@@ -19,7 +19,7 @@ jour-échantillon par mois.
 ../historique/normalize_ohlcv.py     barres minute -> H:\IndicesBoursiers\historique\ohlcv\NQ-2026-09\{1m,1H,4H,D}.csv
 backtests/volume_profile_features.py   ticks -> features_vp.csv (POC/VAH/VAL par session, cadence 1 min)
 backtests/algorithms/*.py            les 8 stratégies LEAN (nq_instrument = frais/levier/lecteur/fenêtre)
-                                     + les 3 JUMEAUX des hybrides (orb/sma_suiveur/rsi_bracket, cadre_hybride)
+                                     + les 3 JUMEAUX des hybrides (sma_{bracket,suiveur,annule}, cadre_hybride)
 backtests/fig_equite_nq.py           JSON de résultats LEAN -> figures des fiches du site
 ```
 
@@ -60,15 +60,16 @@ est cosmétique. Env : conda `backtesting` (Python 3.11) — voir
   (bornes explicites, alignées sur le frère), et `viser()` — le sizing en contrats
   ENTIERS (l'équivalent futures du `set_holdings(±1.0)` crypto). Les stratégies
   restent identiques au frère.
-- `backtests/algorithms/{orb,sma_suiveur,rsi_bracket}_nq.py` — les **jumeaux backtest
-  des 3 stratégies hybrides** du pilier automatisation (volet C, 2026-07-19 ; specs :
-  `../automatisation/docs/strategies-hybrides.md`). SL/TP/suiveur **simulés dans la
-  boucle 1 m** (patron `risque_stops_nq.py`) sous le cadre de séance des specs
-  (entrées 09:30-15:30 ET, flat forcé 16:55 ET, garde-fou 2 pertes pleines/jour,
-  cooldown 15 min). Chaque jumeau écrit un **journal de décisions NDJSON** (un fichier
-  par jour ET, dans `backtests/journaux/<strategie>/`, hors git) — c'est CE fichier que
-  la phase 4 (shadow) comparera au live. **Référence de décisions, PAS un verdict de
-  performance.** Les 8 du banc ne bougent pas.
+- `backtests/algorithms/sma_{bracket,suiveur,annule}_nq.py` — les **jumeaux backtest des
+  3 stratégies hybrides** du pilier automatisation (refonte « déclencheur commun »
+  2026-07-20 ; specs : note en tête de `../automatisation/docs/strategies-hybrides.md`).
+  **Déclencheur COMMUN : croisement SMA 9/21 sur closes 1 m** ; elles ne diffèrent que par
+  la gestion d'ordre (bracket / suiveur / annulation), SL/TP/suiveur **simulés dans la
+  boucle 1 m** (patron `risque_stops_nq.py`) sous le cadre des specs (entrées 09:30-15:30 ET,
+  flat 16:55 ET, cooldown 2 min, garde-fou désactivé par défaut). Chaque jumeau écrit un
+  **journal de décisions NDJSON** (un fichier par jour ET, dans `backtests/journaux/<strategie>/`,
+  hors git) — c'est CE fichier que la phase 4 (shadow) comparera au live. **Référence de
+  décisions, PAS un verdict de performance.** Les 8 du banc ne bougent pas.
 - `backtests/algorithms/cadre_hybride.py` — le cadre COMMUN des 3 jumeaux (même rôle
   que `nq_instrument.py`) : heures de séance en ET (zoneinfo), garde-fou journalier,
   cooldown, écrivain du journal NDJSON.

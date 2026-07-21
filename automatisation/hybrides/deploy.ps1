@@ -26,4 +26,4 @@ foreach ($f in "Hybrides.dll","Hybrides.deps.json","Hybrides.pdb") {
 }
 Write-Host "Déployé dans : $dest"
 Write-Host "⚠ Quantower ne recharge les DLL qu'au REDÉMARRAGE (piège 5 du REPRISE)."
-Write-Host "Panneau Strategies -> Hybride H1 ORB (NQ) / H2 SMA Suiveur / H3 RSI Bracket / Ordres Probe (SIM)."
+Write-Host "Panneau Strategies -> Hybride H1 SMA Bracket / H2 SMA Suiveur / H3 SMA Annulation / Ordres Probe (SIM)."

@@ -78,7 +78,10 @@ public sealed class CadreSeance
         _sortieUtc = utc;
         if (!pertePleine) return false;
         PertesDuJour++;
-        if (PertesDuJour >= PertesMax && !GardeFou)
+        // PertesMax <= 0 = garde-fou DÉSACTIVÉ (phase de test : on veut voir des signaux, pas
+        // arrêter la stratégie après 2 scalps perdants). Le remettre à 2 pour tester CE
+        // mécanisme précis.
+        if (PertesMax > 0 && PertesDuJour >= PertesMax && !GardeFou)
         {
             GardeFou = true;
             return true;

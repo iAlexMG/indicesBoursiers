@@ -5,7 +5,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>OrbNqVisuel</AssemblyName>
+    <AssemblyName>SmaBracketVisuel</AssemblyName>
     <EnableDynamicLoading>true</EnableDynamicLoading>
   </PropertyGroup>
 
@@ -15,8 +15,8 @@
   </Target>
 
   <ItemGroup>
-    <!-- Les MÊMES indicateurs/cadre que la stratégie H1 (aucune dépendance Quantower
-         dedans) : une seule implémentation des formules, le visuel ne peut pas dériver. -->
+    <!-- Les MÊMES indicateurs/cadre que la stratégie H1 (une seule implémentation des
+         formules, parité C#↔LEAN déjà mesurée). -->
     <Compile Include="..\..\hybrides\Indicateurs.cs" />
     <Compile Include="..\..\hybrides\CadreSeance.cs" />
   </ItemGroup>

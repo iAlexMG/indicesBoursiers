@@ -1,5 +1,40 @@
 # Stratégies hybrides — specs exécutables (volet A du chantier automatisation)
 
+> ## ⭐ REFONTE 2026-07-20 — DÉCLENCHEUR COMMUN (supersède les sections ORB/RSI plus bas)
+>
+> Constat utilisateur après le 1er test live de H1 : l'ORB (≤ 1 entrée/jour dans une fenêtre
+> de 2 h) ne donne **pas assez de signaux** pour observer la mécanique. Décision : **repenser
+> les 3 stratégies** autour d'un **déclencheur COMMUN, simple et fréquent** — elles ne
+> diffèrent QUE par la gestion d'ordre. On garde « une mécanique par stratégie » ; on jette
+> les tueurs de fréquence (fenêtre ORB, une entrée/jour, cooldowns longs, filtres).
+>
+> **Déclencheur commun** : **croisement SMA 9/21 sur closes 1 m**. Haussier → long, baissier →
+> short. Seedé par `GetHistory`. C'est le seul point d'entrée des 3.
+>
+> **Cadre commun** : NQ ×1, une position à la fois, entrées **09:30-15:30 ET**, flat forcé
+> **16:55 ET** (horloge murale ; avancer les jours de clôture écourtée), **cooldown 2 min**,
+> **garde-fou désactivé par défaut** (`PertesMax = 0` en phase de test — le remettre à 2 pour
+> tester ce mécanisme), ATR14 sur 1 m pour dimensionner les stops, warm-up par seed.
+>
+> **Les 3 stratégies** (même entrée, gestion différente) :
+> | # | Nom | Sur croisement | Gestion | PROUVE | Jumeau |
+> |---|---|---|---|---|---|
+> | H1 | SMA Bracket | market + **bracket SL 1,5×ATR / TP 1R** | ignore les croisements, attend SL/TP | le **bracket** | `sma_bracket_nq.py` |
+> | H2 | SMA Suiveur | market + **SL 2×ATR, pas de TP** | **stop suiveur** modifié chaque barre 1 m ; sort au croisement inverse | la **modification** | `sma_suiveur_nq.py` |
+> | H3 | SMA Annulation | market + **bracket SL 1,5×ATR / TP 2R** | sort au **croisement inverse** en **annulant** le bracket | l'**annulation** | `sma_annule_nq.py` |
+>
+> **Runs LEAN de contrôle (fenêtre du banc 06-01→07-10, ~28 séances)** — fréquence obtenue :
+> H1 **442 entrées** (229 SL / 213 TP) · H2 **476 entrées**, stop modifié **3183 fois** ·
+> H3 **421 entrées**, **111 annulations** sur croisement inverse. Parité indicateurs C#↔LEAN :
+> **9034 comparaisons, 0 écart**. Rentabilité = non-sujet (cadrage POC). Code live :
+> `automatisation/hybrides/Sma{Bracket,Suiveur,Annule}Hybride.cs`. Visuel H1 :
+> `indicators/SmaBracketVisuel/`.
+>
+> **Le texte ci-dessous (ORB / RSI / 5 m) est CONSERVÉ pour l'historique du volet A/C mais ne
+> décrit plus le code déployé.**
+
+# (Historique) Stratégies hybrides v1 — specs exécutables
+
 > Rédigé le 2026-07-19, resserré le même soir. Pivot : on n'automatise **pas** les 8
 > stratégies du pilier backtesting (artefacts de backtest : signal sur clôture, aucun ordre
 > réellement placé). Hybride = **entrée simple × vraie gestion d'ordres** (SL/TP en ordres

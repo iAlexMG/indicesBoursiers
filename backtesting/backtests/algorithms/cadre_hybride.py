@@ -26,8 +26,9 @@ NY = ZoneInfo("America/New_York")
 ENTREE_DEBUT = 9 * 60 + 30     # 09:30 ET — première entrée permise
 ENTREE_FIN = 15 * 60 + 30      # 15:30 ET — plus rien de neuf après
 FLAT_FORCE = 16 * 60 + 55      # 16:55 ET — tout annuler + liquider, quoi qu'il arrive
-PERTES_MAX = 2                 # 2 pertes pleines -> stratégie arrêtée jusqu'à 09:30
-COOLDOWN_MIN = 15              # pas de nouvelle entrée dans les 15 min d'une sortie
+PERTES_MAX = 0                 # 0 = garde-fou DÉSACTIVÉ (refonte 07-20 : ne pas brider les
+                               # signaux en phase de test) ; 2 pour tester ce mécanisme
+COOLDOWN_MIN = 2               # court : refonte 07-20 (on veut de la fréquence)
 
 
 def heure_ny(t_utc):
@@ -104,7 +105,7 @@ class CadreSeance:
         self.temps_sortie = t
         if perte_pleine:
             self.pertes_du_jour += 1
-            if self.pertes_du_jour >= PERTES_MAX and not self.garde_fou:
+            if PERTES_MAX > 0 and self.pertes_du_jour >= PERTES_MAX and not self.garde_fou:
                 self.garde_fou = True
                 return True
         return False

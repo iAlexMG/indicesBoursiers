@@ -73,11 +73,11 @@ public abstract class HybrideStrategyBase : Strategy
     [InputParameter("Flat forcé à (HH:mm ET — AVANCER les jours de clôture avancée)", 6)]
     public string HeureFlatEt = "16:55";
 
-    [InputParameter("Garde-fou : pertes pleines par jour", 7, 1, 10, 1, 0)]
-    public int PertesMax = 2;
+    [InputParameter("Garde-fou : pertes pleines/jour (0 = désactivé)", 7, 0, 10, 1, 0)]
+    public int PertesMax = 0;      // 0 en phase de test : ne pas brider les signaux
 
     [InputParameter("Cooldown après sortie (minutes)", 8, 0, 120, 1, 0)]
-    public int CooldownMin = 15;
+    public int CooldownMin = 2;    // court : on veut de la fréquence, plus l'anti-frais
 
     [InputParameter("Seed d'historique (heures de barres 1 m)", 9, 2, 168, 1, 0)]
     public int SeedHeures = 48;
@@ -549,13 +549,17 @@ public abstract class HybrideStrategyBase : Strategy
     /// du refus (journalisée par la fille — même vocabulaire que le jumeau).</summary>
     protected string? RaisonRefus(DateTime finBarreUtc)
     {
+        // "seed" et "en_position" = codes SILENCIEUX (les stratégies les ignorent sans
+        // journaliser) : le premier chauffe les indicateurs, le second est l'état normal
+        // pendant qu'un trade est ouvert. Les autres refus (fenêtre/garde-fou/cooldown) sont
+        // journalisés — ils expliquent pourquoi un croisement n'a PAS été pris.
         if (_enSeed) return "seed";
+        if (EnPosition || _entreeEnCours || _shadowEntreeAttendue || SortieEnCours) return "en_position";
         var (_, m) = CadreSeance.HeureEt(finBarreUtc);
         if (m <= Cadre.EntreeDebut || m > Cadre.EntreeFin)
             return $"hors fenêtre d'entrée ({EntreesDebutEt}-{EntreesFinEt} ET)";
         if (Cadre.GardeFou) return "garde-fou journalier actif";
         if (!Cadre.CooldownOk(finBarreUtc)) return $"cooldown {CooldownMin.ToString(Inv)} min";
-        if (EnPosition || _entreeEnCours || _shadowEntreeAttendue || SortieEnCours) return "déjà en position";
         return null;
     }
 

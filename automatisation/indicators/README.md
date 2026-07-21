@@ -67,17 +67,18 @@ parité (native vs Python, seed). Modes fixes = EMA calculée sur l'historique d
 (seed SMA, lissage 2/(N+1)) et projetée → afficher en 1 min ne change pas l'EMA horaire.
 Parité : `python indicators\parity_ema.py` (2 conventions de seed).
 
-## `Hybride H1 ORB (visuel)` — la stratégie H1 dessinée sur le graphe (2026-07-20)
+## `Hybride H1 SMA Bracket (visuel)` — la stratégie H1 dessinée sur le graphe (refonte 2026-07-20)
 
-Le VISUEL de la stratégie `Hybride H1 ORB (NQ)` (chantier automatisation, `../hybrides/`),
-à poser sur un graphe **NQ 1 m** : bornes de la plage 09:30-10:00 ET (lignes bleues,
-tracées de 10:00 à 16:55), flèche d'entrée à la première cassure confirmée (10:00-12:00,
-une par jour), lignes SL (rouge pointillé) / TP (vert pointillé) pendant le trade,
-rond de sortie (vert=TP, rouge=SL, orange=flat). **Mêmes formules que la stratégie et le
-jumeau LEAN** (Compile Include de `../hybrides/Indicateurs.cs` — une seule implémentation,
-parité C#↔LEAN déjà mesurée). Décisions aux clôtures de barres seulement ; n'émet rien
-(ni ordre, ni pop-up, ni journal). Compile **net10.0** (pas net8 : CS1705 contre la
-v1.146.14). **Déployer :** `powershell -File indicators\OrbNqVisuel\deploy.ps1`.
+Le VISUEL de la stratégie `Hybride H1 SMA Bracket (NQ)` (chantier automatisation,
+`../hybrides/`, refonte « déclencheur commun »), à poser sur un graphe **NQ 1 m** : les deux
+SMA du déclencheur (rapide 9 = bleue, lente 21 = orange), flèche d'entrée au croisement,
+lignes SL (rouge pointillé) / TP (vert pointillé) pendant le trade, rond de sortie
+(vert=TP, rouge=SL, orange=flat 16:55). H1 ignore les croisements suivants tant qu'en
+position. **Mêmes formules que la stratégie et le jumeau LEAN** (Compile Include de
+`../hybrides/Indicateurs.cs` — une seule implémentation, parité C#↔LEAN mesurée à 0 écart).
+Décisions aux clôtures de barres ; n'émet rien. Compile **net10.0**.
+**Déployer :** `powershell -File indicators\SmaBracketVisuel\deploy.ps1`. (Visuels H2/H3 :
+sur demande.) L'ancien `OrbNqVisuel` est supprimé (l'ORB est abandonné).
 
 ## `Signaux NQ (strat. avancée)` — marqueurs entrée/sortie sur le graphe
 

@@ -1,6 +1,35 @@
 # Journal du projet — décisions datées & mesures clés
 
-## 2026-07-20 (nuit, suite) — VISUEL H1 : l'indicateur « Hybride H1 ORB (visuel) »
+## 2026-07-20 — REFONTE des 3 stratégies : DÉCLENCHEUR COMMUN (fréquence des signaux)
+
+**Constat utilisateur après le 1er test live de H1** : lancée à 14:22 ET (hors fenêtre
+ORB 10:00-12:00), elle n'a rien journalisé — comportement correct, mais l'ORB (≤ 1 entrée/
+jour dans une fenêtre de 2 h) donne **trop peu de signaux** pour observer la mécanique.
+Décision : **repenser les 3 stratégies** autour d'un **déclencheur COMMUN, simple et
+fréquent** ; elles ne diffèrent QUE par la gestion d'ordre (choix user parmi 3 options).
+- **Déclencheur commun** : croisement SMA 9/21 sur closes **1 m**. Les 3 partagent
+  `DeclencheurSmaCross` (Indicateurs.cs) — une seule implémentation.
+- **Tueurs de fréquence retirés** : fenêtre ORB, une entrée/jour, filtres ; cooldown
+  15 → **2 min** ; garde-fou **désactivé par défaut** (`PertesMax = 0` en test ; 0 = off,
+  géré dans CadreSeance C# et py).
+- **Les 3** (une mécanique chacune, conservée) : **H1 SMA Bracket** (bracket SL 1,5×ATR /
+  TP 1R, attend SL/TP) · **H2 SMA Suiveur** (SL 2×ATR + suiveur, sort au croisement
+  inverse) · **H3 SMA Annulation** (bracket SL 1,5×ATR / TP 2R, annulé au croisement
+  inverse). Anciennes classes `OrbHybride`/`RsiBracketHybride` et jumeaux `orb_nq`/
+  `rsi_bracket_nq` **supprimés** ; nouveaux : `Sma{Bracket,Annule}Hybride.cs` +
+  `sma_{bracket,annule}_nq.py` ; `SmaSuiveurHybride`/`sma_suiveur_nq` **portés du 5 m au
+  1 m**.
+- **Runs LEAN de contrôle** (banc 06-01→07-10, ~28 séances) : H1 **442 entrées**
+  (229 SL / 213 TP) · H2 **476 entrées**, stop modifié **3183 fois** · H3 **421 entrées**,
+  **111 annulations** — chaque mécanique largement exercée, ~15-17 entrées/jour (contre 1
+  pour l'ORB). **Parité indicateurs C#↔LEAN : 9034 comparaisons, 0 écart** (tout sur 1 m,
+  plus d'écart d'amorçage). Compile 0/0, DLL + visuel H1 (`SmaBracketVisuel`, remplace
+  `OrbNqVisuel`) redéployés. 3 modes (SHADOW/CONFIRMATION/AUTO) inchangés.
+- **RESTE user** : redémarrer Quantower → graphe NQ 1 m + « Hybride H1 SMA Bracket
+  (visuel) » + stratégie H1 en SHADOW pendant une séance → le journal devrait fourmiller
+  de signaux et coller au visuel. Visuels H2/H3 sur demande.
+
+## 2026-07-20 (nuit, suite) — VISUEL H1 : l'indicateur « Hybride H1 ORB (visuel) » [SUPERSÉDÉ par la refonte ci-dessus]
 
 **Demande utilisateur** : tester UNE stratégie à la fois, H1 d'abord, et VOIR sur le
 graphique — lignes, niveaux, marqueurs. Réponse : un INDICATEUR (les stratégies Quantower

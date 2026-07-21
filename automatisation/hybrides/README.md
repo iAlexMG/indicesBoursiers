@@ -1,19 +1,26 @@
 # Hybrides — le code LIVE des 3 stratégies + la sonde « Ordres Probe (SIM) »
 
-> Écrit le 2026-07-20 (volet « code live » du chantier automatisation). Specs :
-> [`../docs/strategies-hybrides.md`](../docs/strategies-hybrides.md) · étude Simulator :
-> [`../docs/etude-simulator.md`](../docs/etude-simulator.md) · jumeaux backtest (volet C) :
-> `../../backtesting/backtests/algorithms/{orb,sma_suiveur,rsi_bracket}_nq.py`.
+> Écrit le 2026-07-20 (code live du chantier automatisation), **refondu le même jour**
+> (déclencheur commun — voir la note en tête de
+> [`../docs/strategies-hybrides.md`](../docs/strategies-hybrides.md)). Étude Simulator :
+> [`../docs/etude-simulator.md`](../docs/etude-simulator.md) · jumeaux backtest :
+> `../../backtesting/backtests/algorithms/sma_{bracket,suiveur,annule}_nq.py`.
 > 🎯 Rappel du cadrage : **preuve de concept et de fonctionnalités, PAS la rentabilité.**
 
-**UNE DLL (`Hybrides.dll`, net10.0), quatre stratégies** dans le panneau Strategies :
+**Déclencheur COMMUN aux 3 : croisement SMA 9/21 sur closes 1 m.** Elles ne diffèrent que
+par la gestion d'ordre. **UNE DLL (`Hybrides.dll`, net10.0), quatre stratégies** dans le
+panneau Strategies :
 
-| Classe | Nom dans Quantower | Prouve | Jumeau LEAN |
-|---|---|---|---|
-| `OrbHybride` | Hybride H1 ORB (NQ) | le **bracket** posé au fill | `orb_nq.py` |
-| `SmaSuiveurHybride` | Hybride H2 SMA Suiveur (NQ) | la **modification** d'ordre (suiveur) | `sma_suiveur_nq.py` |
-| `RsiBracketHybride` | Hybride H3 RSI Bracket (NQ) | l'**annulation** du bracket (RSI 50) | `rsi_bracket_nq.py` |
-| `OrdresProbe` | Ordres Probe (SIM) | le cycle de vie des ordres (étude §9) | — |
+| Classe | Nom dans Quantower | Sur croisement (commun) puis… | Prouve | Jumeau LEAN |
+|---|---|---|---|---|
+| `SmaBracketHybride` | Hybride H1 SMA Bracket (NQ) | bracket SL 1,5×ATR / TP 1R, attend SL/TP | le **bracket** | `sma_bracket_nq.py` |
+| `SmaSuiveurHybride` | Hybride H2 SMA Suiveur (NQ) | SL 2×ATR + **stop suiveur** (modifié chaque barre) | la **modification** | `sma_suiveur_nq.py` |
+| `SmaAnnuleHybride` | Hybride H3 SMA Annulation (NQ) | bracket SL 1,5×ATR / TP 2R, **annulé** au croisement inverse | l'**annulation** | `sma_annule_nq.py` |
+| `OrdresProbe` | Ordres Probe (SIM) | (sonde, hors déclencheur commun) | le cycle de vie des ordres (étude §9) | — |
+
+Cadre commun : entrées 09:30-15:30 ET, flat 16:55 ET, cooldown 2 min, garde-fou **désactivé
+par défaut** (`Garde-fou = 0` en test), ATR14 sur 1 m. Fréquence obtenue au banc
+(~28 séances) : H1 442 entrées, H2 476 (stop modifié 3183×), H3 421 (111 annulations).
 
 ## Les TROIS modes d'exécution (paramètre « Mode d'exécution »)
 

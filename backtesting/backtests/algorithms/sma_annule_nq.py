@@ -1,11 +1,12 @@
-# H2 — Croisement SMA 9/21 (1 m) + stop suiveur — JUMEAU BACKTEST de l'hybride H2 (refonte
-# 2026-07-20 ; specs : automatisation/docs/strategies-hybrides.md). Déclencheur COMMUN aux 3
-# hybrides (croisement SMA 1 m) ; H2 = la MODIFICATION (stop suiveur remonté plusieurs fois).
-# Jumeau du code live : automatisation/hybrides/SmaSuiveurHybride.cs (mêmes formules).
-#   - Signal : croisement SMA 9/21 sur closes 1 m. Croisement -> market ×1 + SL 2×ATR14(1 m),
-#     pas de TP.
-#   - Suiveur : à chaque barre 1 m, stop = extrême favorable ∓ 2×ATR, ne recule jamais.
-#   - Sorties : stop, croisement inverse (annulation + market), flat forcé 16:55 ET.
+# H3 — Croisement SMA 9/21 (1 m) + bracket + annulation — JUMEAU BACKTEST de l'hybride H3
+# (refonte 2026-07-20 ; specs : automatisation/docs/strategies-hybrides.md). Remplace
+# rsi_bracket_nq.py. Déclencheur COMMUN aux 3 hybrides (croisement SMA 1 m) ; H3 = H1 mais
+# elle SORT AUSSI au croisement inverse en annulant le bracket — c'est l'ANNULATION qu'elle
+# prouve. Jumeau du code live : automatisation/hybrides/SmaAnnuleHybride.cs (mêmes formules).
+#   - Signal : croisement SMA 9/21 sur closes 1 m. Croisement -> market ×1 + bracket
+#     SL 1,5×ATR14(1 m) / TP 2R (large : le croisement inverse tombe souvent avant).
+#   - Sortie anticipée : croisement inverse -> annulation du bracket + market.
+#   - Sorties : TP, SL, croisement inverse, flat forcé 16:55 ET.
 from AlgorithmImports import *
 import os, sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -15,11 +16,12 @@ from cadre_hybride import CadreSeance, Journal, heure_ny, ENTREE_DEBUT, ENTREE_F
 SMA_RAPIDE = 9
 SMA_LENTE = 21
 PERIODE_ATR = 14
-STOP_MULT = 2.0           # stop / suiveur = extrême favorable ∓ 2 × ATR
+STOP_MULT = 1.5           # SL = entrée ∓ 1,5 × ATR (= R)
+TP_R = 2.0               # TP = entrée ± 2 R (large : l'annulation tombe souvent avant)
 CONTRATS = 1
 
 
-class SmaSuiveurNq(QCAlgorithm):
+class SmaAnnuleNq(QCAlgorithm):
 
     def initialize(self):
         self.nq = setup_nq(self)
@@ -29,23 +31,24 @@ class SmaSuiveurNq(QCAlgorithm):
         self.diff_prec = None
 
         self.cadre = CadreSeance()
-        self.journal = Journal("sma_suiveur_nq")
+        self.journal = Journal("sma_annule_nq")
         self.prix_entree = None
         self.stop_prix = None
-        self.extreme = None
+        self.take_prix = None
         self.atr_entree = None
         self.sortie_en_cours = False
         self.raison = ""
         self.id_ordre = 0
         self.id_courant = None
-        self.nb_entrees = self.nb_stop = self.nb_signal = self.nb_flat = 0
-        self.nb_modifs = self.nb_garde_fou = 0
+        self.nb_entrees = self.nb_stop = self.nb_take = self.nb_signal = self.nb_flat = 0
         self.frais_totaux = 0.0
 
     def _sortir(self, t, code, niveau, raison, perte_pleine, evenement="sortie_envoyee"):
         self.raison = code
-        if code == "STOP":
+        if code == "SL":
             self.nb_stop += 1
+        elif code == "TP":
+            self.nb_take += 1
         elif code == "SIGNAL":
             self.nb_signal += 1
         elif code == "FLAT":
@@ -56,7 +59,6 @@ class SmaSuiveurNq(QCAlgorithm):
         self.sortie_en_cours = True
         self.liquidate(self.nq)
         if self.cadre.sortie(t, perte_pleine):
-            self.nb_garde_fou += 1
             self.journal.ecrire(t, "garde_fou",
                                 raison=f"{PERTES_MAX} pertes pleines — arrêt jusqu'à 09:30 ET")
 
@@ -82,52 +84,50 @@ class SmaSuiveurNq(QCAlgorithm):
                 elif self.diff_prec >= 0 and diff < 0:
                     croisement = -1
             self.diff_prec = diff
-        atr = float(self.atr.current.value) if self.atr.is_ready else None
-        indic = dict(sma_rapide=self.rapide.current.value, sma_lente=self.lente.current.value, atr=atr)
+        indic = dict(sma_rapide=self.rapide.current.value, sma_lente=self.lente.current.value,
+                     atr=float(self.atr.current.value) if self.atr.is_ready else None)
 
-        # 1) EN POSITION : extrême favorable, stop simulé, croisement inverse, flat.
+        # 1) EN POSITION : bracket simulé (SL prioritaire), croisement inverse, flat.
         pos = self.portfolio[self.nq]
         if pos.invested and not self.sortie_en_cours and self.stop_prix is not None:
-            self.extreme = max(self.extreme, haut) if pos.is_long else min(self.extreme, bas)
-            if (pos.is_long and bas <= self.stop_prix) or (pos.is_short and haut >= self.stop_prix):
-                perte = (self.stop_prix < self.prix_entree if pos.is_long
-                         else self.stop_prix > self.prix_entree)
-                self._sortir(t, "STOP", self.stop_prix,
-                             "stop touché" + (" (perte pleine)" if perte else " (gain/breakeven)"),
-                             perte_pleine=perte)
+            touche = None
+            if pos.is_long:
+                if bas <= self.stop_prix:
+                    touche, niveau = "SL", self.stop_prix
+                elif haut >= self.take_prix:
+                    touche, niveau = "TP", self.take_prix
+            else:
+                if haut >= self.stop_prix:
+                    touche, niveau = "SL", self.stop_prix
+                elif bas <= self.take_prix:
+                    touche, niveau = "TP", self.take_prix
+            if touche:
+                self._sortir(t, touche, niveau, f"{touche} touché (bracket simulé)",
+                             perte_pleine=(touche == "SL"))
                 return
             if m >= FLAT_FORCE:
-                self.journal.ecrire(t, "annulation", id_ordre=f"{self.id_courant}-sl",
-                                    raison="flat forcé : stop annulé")
+                self.journal.ecrire(t, "annulation", id_ordre=f"{self.id_courant}-bracket",
+                                    raison="flat forcé : bracket annulé")
                 self._sortir(t, "FLAT", close, "flat forcé 16:55 ET", perte_pleine=False,
                              evenement="flat_force")
                 return
             if (pos.is_long and croisement < 0) or (pos.is_short and croisement > 0):
-                self.journal.ecrire(t, "signal", prix=close, raison="croisement inverse -> sortie", **indic)
-                self.journal.ecrire(t, "annulation", id_ordre=f"{self.id_courant}-sl",
-                                    raison="sortie signal : stop annulé")
+                self.journal.ecrire(t, "signal", prix=close,
+                                    raison="croisement inverse -> sortie anticipée", **indic)
+                self.journal.ecrire(t, "annulation", id_ordre=f"{self.id_courant}-bracket",
+                                    raison="sortie signal : bracket annulé")
                 self._sortir(t, "SIGNAL", close, "croisement inverse", perte_pleine=False)
-                return
-            if atr is not None:                      # stop suiveur, ne recule jamais
-                candidat = (self.extreme - STOP_MULT * atr if pos.is_long
-                            else self.extreme + STOP_MULT * atr)
-                if (pos.is_long and candidat > self.stop_prix) or (pos.is_short and candidat < self.stop_prix):
-                    self.stop_prix = candidat
-                    self.nb_modifs += 1
-                    self.journal.ecrire(t, "stop_modifie", prix=self.stop_prix,
-                                        id_ordre=f"{self.id_courant}-sl", raison="suiveur",
-                                        extreme=self.extreme, atr=atr)
             return
 
         # 2) ENTRÉE sur croisement.
         pos = self.portfolio[self.nq]
-        if (croisement == 0 or pos.invested or self.sortie_en_cours or atr is None
+        if (croisement == 0 or pos.invested or self.sortie_en_cours or not self.atr.is_ready
                 or self.cadre.garde_fou or not self.cadre.cooldown_ok(t)
                 or not (ENTREE_DEBUT < m <= ENTREE_FIN)):
             return
         sens = CONTRATS if croisement > 0 else -CONTRATS
         sens_txt = "haussier -> long" if croisement > 0 else "baissier -> short"
-        self.atr_entree = atr
+        self.atr_entree = float(self.atr.current.value)
         self.id_ordre += 1
         self.id_courant = self.id_ordre
         self.journal.ecrire(t, "signal", prix=close, raison=f"croisement {sens_txt}", **indic)
@@ -144,29 +144,29 @@ class SmaSuiveurNq(QCAlgorithm):
         if pos.invested:
             e = float(event.fill_price)
             self.prix_entree = e
-            self.extreme = e
             self.nb_entrees += 1
-            self.stop_prix = (e - STOP_MULT * self.atr_entree if pos.is_long
-                              else e + STOP_MULT * self.atr_entree)
+            r = STOP_MULT * self.atr_entree
+            if pos.is_long:
+                self.stop_prix, self.take_prix = e - r, e + TP_R * r
+            else:
+                self.stop_prix, self.take_prix = e + r, e - TP_R * r
             self.journal.ecrire(t, "fill", prix=e, qte=int(event.fill_quantity),
                                 id_ordre=self.id_courant, raison="fill d'entrée")
-            self.journal.ecrire(t, "bracket_pose", prix=e, id_ordre=f"{self.id_courant}-sl",
-                                raison=f"SL seul {STOP_MULT}×ATR, pas de TP (simulé, boucle 1 m)",
-                                stop=self.stop_prix, atr=self.atr_entree)
+            self.journal.ecrire(t, "bracket_pose", prix=e, id_ordre=f"{self.id_courant}-bracket",
+                                raison=f"SL {STOP_MULT}×ATR / TP {TP_R}R (simulé, boucle 1 m)",
+                                stop=self.stop_prix, take=self.take_prix, atr=self.atr_entree)
         else:
             s = float(event.fill_price)
             self.journal.ecrire(t, "fill", prix=s, qte=int(event.fill_quantity),
                                 id_ordre=self.id_courant, raison=f"fill de sortie [{self.raison}]")
-            self.prix_entree = self.stop_prix = self.extreme = None
+            self.prix_entree = self.stop_prix = self.take_prix = None
             self.sortie_en_cours = False
 
     def on_end_of_algorithm(self):
         self.journal.fermer()
         equite = float(self.portfolio.total_portfolio_value)
-        self.log(f"--- BILAN JUMEAU H2 SMA {SMA_RAPIDE}/{SMA_LENTE} + SUIVEUR NQ (1 m, "
-                 f"stop {STOP_MULT}×ATR{PERIODE_ATR}, flat 16:55 ET) ---")
-        self.log(f"Entrées : {self.nb_entrees} | sorties : {self.nb_stop} stop, "
-                 f"{self.nb_signal} croisement inverse, {self.nb_flat} flat | "
-                 f"stop modifié {self.nb_modifs} fois | garde-fou : {self.nb_garde_fou} | "
-                 f"frais : {self.frais_totaux:.2f} $")
+        self.log(f"--- BILAN JUMEAU H3 SMA {SMA_RAPIDE}/{SMA_LENTE} + ANNULATION NQ (1 m, "
+                 f"SL {STOP_MULT}×ATR{PERIODE_ATR}, TP {TP_R}R, sortie croisement inverse, flat 16:55 ET) ---")
+        self.log(f"Entrées : {self.nb_entrees} | sorties : {self.nb_stop} SL, {self.nb_take} TP, "
+                 f"{self.nb_signal} croisement inverse, {self.nb_flat} flat | frais : {self.frais_totaux:.2f} $")
         self.log(f"Équité finale : {equite:.2f} $ | rendement : {equite / CAPITAL - 1:+.4%}")
