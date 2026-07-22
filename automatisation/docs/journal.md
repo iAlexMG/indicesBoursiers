@@ -1,5 +1,19 @@
 # Journal du projet — décisions datées & mesures clés
 
+## 2026-07-22 — CONFIRMATION réglé pour H2 : ne confirmer que ce qui OUVRE/FERME
+
+Après validation du mécanisme (Test 1), correctif du mode CONFIRMATION (le user me laisse
+choisir la suite → option 2, pur code sans risque). Principe retenu : **l'humain initie
+chaque POSITION ; la gestion protectrice est automatique.**
+- **Entrées** et **sorties sur signal** (croisement inverse) → pop-up (le user clique).
+- **Stop suiveur** → AUTO (ne fait que resserrer une protection sur une position déjà
+  confirmée ; sinon un pop-up PAR BARRE = impraticable pour H2). ← le vrai correctif.
+- **Flat de fin de séance** → AUTO (être flat est OBLIGATOIRE côté prop firm ; on ne peut
+  pas dépendre d'un clic à temps). Supprime l'ancien pop-up insistant + `_propDernierRappelUtc`.
+- SL/TP : exécutés par l'ordre attaché. Kill switch (bouton Stop) : Flatten, inchangé.
+Commentaires du Mode + README à jour. ⚠️ **Interprétation des règles Apex à confirmer par
+le user** (l'humain initie chaque position, la protection est auto). Compile 0/0, redéployé.
+
 ## 2026-07-22 — Validation du pop-up CONFIRMATION : bouton de test sans risque
 
 User (après les 3 visuels) choisit de valider le pop-up de CONFIRMATION. Revue du code :

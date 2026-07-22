@@ -38,12 +38,14 @@ public abstract class HybrideStrategyBase : Strategy
 
     // Les TROIS modes d'exécution (décisions user des 2026-07-19/20) :
     //   SHADOW (défaut)  — phase 4 : décisions + journal, ordres SIMULÉS au tick, zéro API.
-    //   CONFIRMATION     — semi-automatisé, l'HUMAIN dans la boucle : chaque ordre (entrée,
-    //     modification du suiveur, sortie signal, flat) est PROPOSÉ par un pop-up Alert
-    //     (bouton de confirmation mesuré : Utils.Alert.ActionOnConfirm) ; rien ne part sans
-    //     le clic de l'utilisateur — c'est LUI qui initie chaque transaction. Compatible
-    //     avec l'interdit Apex des bots (dixit l'utilisateur, source d'autorité sur ses
-    //     règles) ; la case « compte réel » reste un DEUXIÈME consentement explicite.
+    //   CONFIRMATION     — semi-automatisé, l'HUMAIN dans la boucle : l'humain initie chaque
+    //     POSITION. Les ENTRÉES et les SORTIES SUR SIGNAL sont PROPOSÉES par un pop-up Alert
+    //     (Utils.Alert.ActionOnConfirm, mesuré) — rien ne s'ouvre/se ferme discrétionnairement
+    //     sans son clic. En revanche, la GESTION PROTECTRICE d'une position déjà confirmée
+    //     s'applique AUTOMATIQUEMENT : stop suiveur (resserrement) et flat de fin de séance
+    //     (obligatoire) — ça ne fait que réduire le risque, et confirmer le suiveur à chaque
+    //     barre serait impraticable (H2). Compatible avec l'interdit Apex des bots (l'humain
+    //     initie ; le reste est de la protection) ; la case « compte réel » = 2e consentement.
     //   AUTO             — ordres directs sans confirmation : Trading Simulator (ou phase 5).
     [InputParameter("Mode d'exécution", 2, variants: new object[] {
         "SHADOW — journal seulement, ZÉRO ordre", ModeShadowV,
@@ -156,7 +158,6 @@ public abstract class HybrideStrategyBase : Strategy
     private int _propActive;                      // proposition en cours (0 = aucune)
     private DateTime _propExpireUtc;
     private Action? _propGeste;                   // le geste RÉEL, exécuté au clic seulement
-    private DateTime _propDernierRappelUtc = DateTime.MinValue;   // cadence du rappel de flat
 
     protected bool EnPosition => PositionCourante is not null || _shadowSens != 0;
     protected bool SortieEnCours => _sortieEnCours || _shadowSortieAttendue;
@@ -536,20 +537,9 @@ public abstract class HybrideStrategyBase : Strategy
                 if (minutes < Cadre.FlatForce || _sortieEnCours
                     || (PositionCourante is null && !DesOrdresVivants()))
                     return;
-                if (EnConfirmation)
-                {
-                    // Jamais d'ordre sans clic, même pour le flat : pop-up INSISTANT
-                    // (répété chaque minute tant que la position vit). L'utilisateur
-                    // garde la main — et la responsabilité — du flat de fin de séance.
-                    if ((DateTime.UtcNow - _propDernierRappelUtc).TotalSeconds >= 60)
-                    {
-                        _propDernierRappelUtc = DateTime.UtcNow;
-                        Proposer($"{Name} : FLAT FORCÉ {HeureFlatEt} ET ?",
-                                 "tout annuler + liquider MAINTENANT (rappel chaque minute)",
-                                 FlatReel);
-                    }
-                    return;
-                }
+                // Flat de fin de séance : AUTOMATIQUE même en CONFIRMATION. Être flat à la fin
+                // est OBLIGATOIRE côté prop firm, et ça ne fait que fermer/réduire le risque —
+                // on ne peut pas dépendre d'un clic humain à temps.
                 FlatReel();
             }
         }
@@ -734,17 +724,11 @@ public abstract class HybrideStrategyBase : Strategy
                     raison: "suiveur (simulé)", indicateurs: indicateurs);
             return true;
         }
-        if (EnConfirmation)
-        {
-            if (PositionCourante is null) return false;
-            // Proposé, jamais appliqué seul : refuser/ignorer = le stop RESTE où il est
-            // (toujours protecteur). La fille re-proposera un candidat frais à la
-            // prochaine barre de signal — la proposition la plus récente remplace.
-            Proposer($"{Name} : REMONTER LE STOP ?",
-                     $"stop suiveur -> {nouveauPrix.ToString(Inv)}",
-                     () => ModifStopReelle(nouveauPrix, indicateurs));
-            return false;
-        }
+        // CONFIRMATION : le suiveur s'applique AUTOMATIQUEMENT (comme en AUTO). Il ne fait que
+        // RESSERRER un stop protecteur sur une position DÉJÀ confirmée par l'humain — jamais une
+        // nouvelle prise de risque — donc pas de pop-up (sinon un par barre = impraticable pour
+        // H2). Seules les ENTRÉES demandent un clic. (Décision 2026-07-22 ; lecture des règles
+        // Apex : l'humain initie chaque POSITION, la gestion protectrice est automatique.)
         return ModifStopReelle(nouveauPrix, indicateurs);
     }
 

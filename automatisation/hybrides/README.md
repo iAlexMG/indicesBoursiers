@@ -38,15 +38,17 @@ transaction (dixit l'utilisateur, source d'autorité sur ses règles).
    ordres **au tick** (fill au trade suivant, bracket à chaque trade, suiveur,
    annulations) — le moteur des jumeaux LEAN porté au live. AUCUN appel à l'API d'ordres,
    aucun compte requis. Journal ids `shadow-N`.
-2. **CONFIRMATION** — le semi-automatisé, l'humain dans la boucle : chaque geste (entrée,
-   modification du suiveur, sortie signal, flat) est **PROPOSÉ par un pop-up Alert**
-   (`Utils.Alert.ActionOnConfirm`, mesuré) — **rien ne part sans le clic**. Confirmer =
-   accepter ; ignorer = refus (expiration paramétrable, défaut 120 s ; journal ids
-   `prop-N`). Une proposition à la fois, la plus récente remplace. Détails de prudence :
-   le suiveur n'est JAMAIS appliqué seul (refusé = le stop reste, toujours protecteur) ;
-   le flat de fin de séance est un pop-up INSISTANT (rappel chaque minute), jamais un
-   ordre auto ; le bouton Stop (un clic humain) déclenche, lui, le Flatten du kill switch.
-   Sur compte réel, la case « Autoriser un compte réel » reste un DEUXIÈME consentement.
+2. **CONFIRMATION** — le semi-automatisé, l'humain dans la boucle : **l'humain initie chaque
+   POSITION.** Les **entrées** et les **sorties sur signal** (croisement inverse) sont
+   **PROPOSÉES par un pop-up Alert** (`Utils.Alert.ActionOnConfirm`, mesuré ✅) — rien ne
+   s'ouvre/se ferme discrétionnairement sans son clic. Confirmer = accepter ; ignorer = refus
+   (expiration paramétrable, défaut 120 s ; journal ids `prop-N`). En revanche, la **gestion
+   protectrice** d'une position déjà confirmée s'applique **AUTOMATIQUEMENT** : **stop suiveur**
+   (resserrement — sinon un pop-up par barre, impraticable pour H2) et **flat de fin de séance**
+   (obligatoire côté prop firm) ; ça ne fait que réduire le risque. Le SL/TP est exécuté par
+   l'ordre attaché. Le bouton Stop (clic humain) déclenche le Flatten du kill switch. Sur
+   compte réel, « Autoriser un compte réel » = DEUXIÈME consentement. (Lecture des règles Apex :
+   l'humain initie chaque position, la protection est automatique — à confirmer par l'utilisateur.)
 3. **AUTO** — ordres directs sans confirmation : Trading Simulator (s'il est acheté un
    jour — pack Advanced Features / All-in-One, garantie 10 j) ou phase 5. La sonde
    logicielle « Ordres Probe (SIM) » reste prête pour ce cas.
@@ -139,10 +141,10 @@ d'abord la sonde, puis les 3 hybrides en séance.
    affichage + clic → `ActionOnConfirm` — sans aucun ordre. Laisser expirer valide l'affichage
    + l'expiration. **Ensuite seulement**, pour prouver le clic → ordre RÉEL : mode
    CONFIRMATION sur **MNQ ×1** (2 $/pt), « Autoriser un compte réel » coché, en surveillant.
-   ⚠️ **H2 en CONFIRMATION** : le stop suiveur voudrait se modifier à CHAQUE barre → un
-   pop-up par barre, impraticable. À revoir (auto-appliquer les resserrements de stop, qui ne
-   font que réduire le risque, et ne demander confirmation que des ENTRÉES) avant d'utiliser
-   H2 en confirmation. H1/H3 n'ont pas ce souci (une décision par entrée/sortie).
+   ✅ **H2 en CONFIRMATION réglé le 2026-07-22** : le stop suiveur s'applique désormais
+   AUTOMATIQUEMENT (resserrement = réduction du risque), le flat aussi ; seules les entrées
+   et sorties sur signal demandent un clic → plus de pop-up par barre. Interprétation Apex à
+   confirmer par l'utilisateur (l'humain initie chaque position, la protection est auto).
 1. `SlTpHolder` en `Offset` = ticks depuis le fill (sémantique attendue ; étape A vérifie
    « SL posé à ~20 ticks »).
 2. Le sort du bracket après `Position.Close()` (attendu : annulé ; étape A3 le mesure).
