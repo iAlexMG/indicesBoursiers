@@ -130,7 +130,9 @@ d'abord la sonde, puis les 3 hybrides en séance.
 
 ## À SONDER (ce que la compile ne prouve pas — la sonde et la 1re séance trancheront)
 
-0. **Le pop-up de CONFIRMATION — validation SANS RISQUE via le bouton de test** : cocher
+0. ✅ **Le pop-up de CONFIRMATION — MÉCANISME VALIDÉ le 2026-07-22** (affichage + clic →
+   `ActionOnConfirm`, via le bouton de test, en shadow, sans ordre). Reste à prouver : le
+   clic → ordre RÉEL (Test 2, MNQ ×1 sur Apex). **Validation SANS RISQUE via le bouton de test** : cocher
    **« Test : pop-up de confirmation au démarrage (aucun ordre) »** et lancer la stratégie
    **en mode SHADOW** (aucun compte requis). Au démarrage, un pop-up apparaît ; le « OK » ne
    fait que journaliser (`✅ TEST : pop-up CONFIRMÉ par clic`). Ça valide TOUT le mécanisme —

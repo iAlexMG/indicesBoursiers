@@ -15,6 +15,9 @@ veut se modifier chaque barre) → à revoir (auto-appliquer les resserrements d
 confirmer que les entrées) avant d'utiliser H2 en confirmation ; H1/H3 OK.
 **RESTE user** : cocher le test, lancer H1 en shadow, voir le pop-up, cliquer OK → le log
 confirme. Puis (optionnel) 1er ordre réel MNQ ×1 en CONFIRMATION sur Apex.
+**✅ TEST 1 CONFIRMÉ par le user (2026-07-22)** : le pop-up s'affiche et le clic déclenche
+`ActionOnConfirm` — le MÉCANISME de confirmation est prouvé à l'exécution (partagé par les 3).
+Reste : Test 2 (clic → ordre RÉEL, MNQ ×1 sur Apex, optionnel) + le correctif H2-confirmation.
 
 ## 2026-07-22 — Visuel H3 : l'annulation (les 3 visuels sont faits)
 
