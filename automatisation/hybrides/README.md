@@ -101,10 +101,24 @@ cd parite; dotnet run -c Release            # -> parite_csharp.csv (fenêtre du 
 & $HOME\miniconda3\envs\backtesting\python.exe compare_parite.py
 ```
 
-Résultat (2026-07-20, fenêtre 06-01 → 07-10) : **3 799 comparaisons, 10 écarts, TOUS dans
-les 5 premières heures du 1er juin** (amorçage de Wilder, max 0,35 pt de RSI, éteint en
-~90 min). Au-delà de l'amorçage : parité exacte à l'arrondi près. Avec le seed de 48 h,
-l'amorçage du live est consommé bien avant toute décision de séance.
+Résultat (fenêtre 06-01 → 07-10) : refonte 1 m du 2026-07-20 → **9 034 comparaisons, 0 écart**
+(SMA 9/21 + ATR14, tout sur 1 m). Parité indicateurs parfaite.
+
+## Parité PHASE 4 — décisions live (shadow) ↔ jumeau backtest
+
+`parite/parite_shadow.py` compare les `signal` (minute + sens) du **journal SHADOW live**
+(`H:\IndicesBoursiers\automatisation\journaux\<slug>\<date>.ndjson`) au **jumeau backtest du
+même jour** (`backtesting/backtests/journaux/<slug>/<date>.ndjson`), dans les fenêtres où le
+shadow tournait. C'est la mesure « en réel, décide-t-il comme au backtest ? ».
+```powershell
+python parite_shadow.py --lister <journal.ndjson>           # dump des signaux d'un journal
+python parite_shadow.py --slug sma_bracket_nq --date 2026-07-22
+```
+⚠️ **Prérequis données** : le jumeau du jour n'existe que si le CSV 1 m couvre ce jour. Au
+2026-07-22, CSV + base de barres s'arrêtent au **17 juillet** → il faut d'abord (a) lancer
+l'extracteur `NQ-ES History Bars 1m` dans Quantower, (b) régénérer le CSV (`normalize_ohlcv`),
+(c) rejouer le jumeau sur les jours voulus. Pour un artefact solide : shadow PUR (sans
+confirmation) sur des séances complètes, extracteur qui tourne en parallèle.
 
 ## Déployer & lancer
 

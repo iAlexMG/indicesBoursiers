@@ -198,14 +198,28 @@ public abstract class HybrideStrategyBase : Strategy
         {
             if (Compte is null) { this.LogError("Aucun compte sélectionné (requis hors shadow)."); this.Stop(); return; }
 
-            // GARDE ANTI-COMPTE-RÉEL : jamais d'ordre hors Simulator tant que la phase 5 n'a
-            // pas explicitement ouvert la porte (paramètre). Le type de connexion fait foi.
             var typeConn = Compte.Connection?.Type;
+
+            // GARDE DUR : AUTO (ordres directs, SANS humain) est INTERDIT hors Trading
+            // Simulator. Sur un compte réel = un bot, du mauvais côté des règles prop firm
+            // (supervision humaine active exigée — mémoire apex-regles-automatisation). AUCUNE
+            // case ne lève ce refus : seul CONFIRMATION (l'humain initie) peut aller sur le réel.
+            if (Mode == ModeAutoV && typeConn != ConnectionType.TradingSimulator)
+            {
+                this.LogError($"Mode AUTO REFUSÉ sur « {Compte.Name} » ({typeConn?.ToString() ?? "?"}) : "
+                            + "les ordres automatiques (sans confirmation humaine) ne sont permis que "
+                            + "sur le Trading Simulator. Sur un compte réel, utiliser CONFIRMATION.");
+                this.Stop();
+                return;
+            }
+
+            // GARDE ANTI-COMPTE-RÉEL : jamais d'ordre hors Simulator tant que la porte n'est
+            // pas explicitement ouverte (paramètre). Le type de connexion fait foi.
             if (typeConn != ConnectionType.TradingSimulator && !AutoriserCompteReel)
             {
                 this.LogError($"Compte « {Compte.Name} » sur une connexion {typeConn?.ToString() ?? "?"} : "
                             + "REFUSÉ. Ces stratégies ne tradent que le Trading Simulator tant que "
-                            + "« Autoriser un compte réel » (phase 5) n'est pas coché.");
+                            + "« Autoriser un compte réel » n'est pas coché.");
                 this.Stop();
                 return;
             }

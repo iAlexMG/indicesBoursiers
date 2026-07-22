@@ -1,5 +1,24 @@
 # Journal du projet — décisions datées & mesures clés
 
+## 2026-07-22 (suite) — Garde-fou AUTO + outil de parité PHASE 4 (bloquée sur données)
+
+User dit GO à 3 choses (garde-fou AUTO / incrémental H2-H3 en réel / phase 4).
+1. **✅ Garde-fou AUTO** (dans Demarrer) : le mode AUTO REFUSE de démarrer sur toute connexion
+   ≠ TradingSimulator, **quoi qu'il arrive** (même « Autoriser un compte réel » coché) — un bot
+   sur Apex = du mauvais côté des règles. Seul CONFIRMATION va sur le réel. Compile 0/0, déployé.
+2. **✅ Outil de parité PHASE 4** : `hybrides/parite/parite_shadow.py` — compare les décisions
+   (`signal` : minute + sens) du journal SHADOW live au jumeau backtest du MÊME jour, dans les
+   fenêtres où le shadow tournait. Smoke-testé (`--lister`) : lit bien le shadow 07-22 (3 signaux).
+3. ⛔ **La comparaison est BLOQUÉE SUR LA DONNÉE** : CSV 1 m ET base de barres s'arrêtent au
+   **17 juillet** (l'extracteur `NQ-ES History Bars 1m` n'a pas tourné depuis) ; les jours du
+   shadow (21-22 juillet) ne sont pas couverts → pas de jumeau à comparer. **Débloquer** :
+   (a) USER lance l'extracteur de barres dans Quantower (remplit la base jusqu'à aujourd'hui) ;
+   (b) je régénère le CSV (normalize_ohlcv) + rejoue le jumeau sur une fenêtre incluant ces
+   jours ; (c) `parite_shadow.py --slug … --date …`. Pour un artefact solide : shadow PUR (pas
+   mêlé de confirmation) sur des séances complètes, extracteur qui tourne en parallèle.
+**Incrémental H2/H3 en réel** = protocole donné au user (H2/H3 en CONFIRMATION sur Apex, MNQ ×1,
+observer la modification / l'annulation sur un vrai ordre — quand une occasion se présente).
+
 ## 2026-07-22 — ✅ TEST 2 : PREMIER ORDRE RÉEL SUR APEX — la chaîne live est PROUVÉE
 
 Le user passe H1 en CONFIRMATION sur **MNQ ×1**, compte Apex, « Autoriser un compte réel »
