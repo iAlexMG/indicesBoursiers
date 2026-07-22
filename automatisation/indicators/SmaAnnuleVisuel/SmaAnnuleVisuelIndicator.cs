@@ -95,6 +95,7 @@ public sealed class SmaAnnuleVisuelIndicator : Indicator
     private readonly Pen _lnSl = new(Color.FromArgb(200, Color.OrangeRed), 1.2f) { DashStyle = DashStyle.Dash };
     private readonly Pen _lnSlFort = new(Color.OrangeRed, 2.2f) { DashStyle = DashStyle.Dash };
     private readonly Pen _lnEntree = new(Color.FromArgb(120, Color.Gainsboro), 1f) { DashStyle = DashStyle.Dot };
+    private readonly Pen _lnAnnul = new(Color.FromArgb(225, 255, 200, 90), 1.6f) { DashStyle = DashStyle.Dash };   // sortie signal (ambre)
     private readonly Brush _dotVert = new SolidBrush(Color.LimeGreen);
     private readonly Brush _dotRouge = new SolidBrush(Color.Red);
     private readonly Brush _dotOrange = new SolidBrush(Color.Orange);
@@ -266,7 +267,13 @@ public sealed class SmaAnnuleVisuelIndicator : Indicator
             {
                 bool gain = t.Pts >= 0;
                 float yNiv = (float)conv.GetChartY(t.SortieNiveau);
-                if (t.SortieType == 'X')      // ANNULATION : losange au milieu de la zone
+                // Ligne de sortie SIGNAL (annulation / flat) : au niveau de sortie, sur toute
+                // la durée du trade, en AMBRE — distincte du SL/TP puisque le bracket n'a pas
+                // été atteint mais annulé.
+                if (t.SortieType is 'X' or 'F')
+                    gr.DrawLine(_lnAnnul, xL, yNiv, xR, yNiv);
+
+                if (t.SortieType == 'X')      // ANNULATION : losange sur la ligne de sortie
                     Losange(gr, gain ? _dotVert : _dotRouge, xR, yNiv, 6f);
                 else                          // TP / SL / flat : cercle sur le niveau
                 {
@@ -281,7 +288,9 @@ public sealed class SmaAnnuleVisuelIndicator : Indicator
                              + (t.SortieType == 'X' ? " ✕" : "");
                     var sz = gr.MeasureString(s, _font);
                     float lx = Math.Max(rect.Left + 2f, Math.Min(xL + w / 2f - sz.Width / 2f, rect.Right - sz.Width - 6f));
-                    float ly = gain ? yTp - sz.Height - 3f : ySl + 3f;
+                    // Ancrée sur la LIGNE DE SORTIE (yNiv) : TP -> à sa ligne, SL -> à la sienne,
+                    // annulation -> à la ligne d'annulation. Gain au-dessus, perte en dessous.
+                    float ly = gain ? yNiv - sz.Height - 3f : yNiv + 3f;
                     gr.FillRectangle(_pillBg, lx - 3f, ly - 1f, sz.Width + 6f, sz.Height + 2f);
                     gr.DrawString(s, _font, gain ? _txtVert : _txtRouge, lx, ly);
                 }
