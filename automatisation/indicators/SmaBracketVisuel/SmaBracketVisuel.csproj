@@ -26,6 +26,11 @@
       <HintPath>$(QuantowerBin)\TradingPlatform.BusinessLayer.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- Brush/Pen/Graphics (GDI+) pour OnPaintChart — fourni par Quantower (bin\System). -->
+    <Reference Include="System.Drawing.Common">
+      <HintPath>$(QuantowerBin)\System\System.Drawing.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
 </Project>

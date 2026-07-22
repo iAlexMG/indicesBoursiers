@@ -1,5 +1,19 @@
 # Journal du projet — décisions datées & mesures clés
 
+## 2026-07-22 — Visuel H1 : rendu de la ZONE de trade en OnPaintChart
+
+Retour utilisateur (visuel validé mais 3 défauts de rendu) : (1) les points de sortie
+étaient posés au prix de CLÔTURE, pas sur le niveau SL/TP touché ; (2) les line series
+SL/TP traçaient une oblique parasite ; (3) demande d'un encadré rouge/vert par côté
+perdant/gagnant. **Refonte du rendu** de `SmaBracketVisuelIndicator` : suppression des line
+series SL/TP (les 2 SMA restent) ; la zone de chaque trade est peinte en **`OnPaintChart`**
+(patron `VpSessionNq` : `CoordinatesConverter.GetChartX/GetChartY`, GDI+) — encadré **vert**
+entrée→TP + **rouge** entrée→SL, de la barre d'entrée à la barre de sortie ; flèche d'entrée
+(triangle) ; **point de sortie posé EXACTEMENT sur le niveau touché** (FillEllipse à
+`GetChartY(niveau)`). Ajout de la réf `System.Drawing.Common` (bin\System) au csproj (comme
+VpSessionNq). Liste de trades bornée (1000), clipping hors-écran. Compile 0 erreur (13 warns
+CA1416 Windows-only, bénins), déployé. À re-valider à l'œil.
+
 ## 2026-07-20 (soir) — MODE 24 H : interrupteur « Restreindre à la séance NY »
 
 Demande utilisateur : les horaires de séance NY sont trop contraignants pour tester ; il

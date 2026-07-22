@@ -7,12 +7,15 @@ namespace SmaBracketVisuel;
 /// <summary>
 /// Hybride H1 SMA Bracket — le VISUEL sur le graphique (graphe NQ 1 m). Rejoue la logique
 /// EXACTE de la stratégie `Hybride H1 SMA Bracket (NQ)` et du jumeau `sma_bracket_nq.py`
-/// (mêmes classes d'indicateurs — Compile Include de hybrides/Indicateurs.cs) et DESSINE :
-///   - les deux SMA du déclencheur commun (rapide 9 = bleue, lente 21 = orange) ;
-///   - le marqueur d'ENTRÉE (flèche verte ↑ long / rouge ↓ short) au croisement ;
-///   - les lignes SL (rouge pointillé) / TP (vert pointillé) du bracket pendant le trade ;
-///   - le marqueur de SORTIE (rond : vert = TP, rouge = SL, orange = flat 16:55).
-/// H1 IGNORE les croisements suivants tant qu'en position (le bracket referme seul).
+/// (mêmes classes d'indicateurs — Compile Include de hybrides/Indicateurs.cs).
+///
+/// Rendu (2026-07-22, refonte du rendu) :
+///   - deux SMA du déclencheur (rapide 9 = bleue, lente 21 = orange) — en line series ;
+///   - pour CHAQUE trade, la ZONE peinte en `OnPaintChart` : encadré **vert** (entrée → TP,
+///     le côté gagnant) et **rouge** (entrée → SL, le côté perdant), du bord de l'entrée au
+///     bord de la sortie ; flèche d'entrée ; et **point de sortie posé EXACTEMENT sur le
+///     niveau touché** (haut du vert = TP, bas du rouge = SL). Plus de line series SL/TP
+///     (qui traçaient une oblique parasite et posaient le point au mauvais prix).
 /// Décisions AUX CLÔTURES de barres. N'émet rien (ni ordre, ni pop-up, ni journal).
 /// </summary>
 public sealed class SmaBracketVisuelIndicator : Indicator
@@ -44,32 +47,52 @@ public sealed class SmaBracketVisuelIndicator : Indicator
     [InputParameter("Cooldown après sortie (minutes)", 8, 0, 120, 1, 0)]
     public int CooldownMin = 2;
 
-    // Décoché (défaut) = 24 h : cassures dessinées quand le marché est ouvert (aussi le
-    // soir), sans fenêtre ni flat de séance — pour observer le graphe à toute heure.
     [InputParameter("Restreindre à la séance NY (décoché = 24 h)", 9)]
     public bool SeanceNY = false;
 
-    private const int LRapide = 0, LLente = 1, LSl = 2, LTp = 3, LMarqueurs = 4;
+    private const int LRapide = 0, LLente = 1;   // seules les 2 SMA restent en line series
+    private const int MaxTrades = 1000;          // borne mémoire (les vieux trades tombent)
 
     private DeclencheurSmaCross _cross = null!;
     private AtrWilder _atr = null!;
     private int _debut, _fin, _flat;
 
-    private int _sens;                       // 0 flat, ±1 en position simulée
-    private double _stop = double.NaN, _take = double.NaN;
+    /// <summary>Un trade dessiné : entrée, niveaux, et sortie (temps + niveau touché).</summary>
+    private sealed class Trade
+    {
+        public DateTime EntreeTemps;
+        public double EntreePrix, Sl, Tp;
+        public int Sens;                          // +1 long, -1 short
+        public DateTime? SortieTemps;
+        public double SortieNiveau;               // le prix EXACT où le trade s'est fermé
+        public char SortieType;                   // 'T' TP, 'S' SL, 'F' flat
+    }
+
+    private readonly object _lock = new();
+    private readonly List<Trade> _trades = new();
+    private Trade? _courant;
     private DateTime _derniereBarreTraitee = DateTime.MinValue;
+    private DateTime _dernierTempsBarre = DateTime.MinValue;
     private DateTime _sortieUtc = DateTime.MinValue;
+
+    // GDI+ (créés une fois, réutilisés — patron VpSessionNq).
+    private readonly Brush _fillVert = new SolidBrush(Color.FromArgb(38, Color.LimeGreen));
+    private readonly Brush _fillRouge = new SolidBrush(Color.FromArgb(38, Color.OrangeRed));
+    private readonly Pen _penVert = new(Color.FromArgb(140, Color.LimeGreen), 1f);
+    private readonly Pen _penRouge = new(Color.FromArgb(140, Color.OrangeRed), 1f);
+    private readonly Brush _dotVert = new SolidBrush(Color.LimeGreen);
+    private readonly Brush _dotRouge = new SolidBrush(Color.Red);
+    private readonly Brush _dotOrange = new SolidBrush(Color.Orange);
+    private readonly Brush _triLong = new SolidBrush(Color.LimeGreen);
+    private readonly Brush _triShort = new SolidBrush(Color.Red);
 
     public SmaBracketVisuelIndicator()
     {
         Name = "Hybride H1 SMA Bracket (visuel)";
-        Description = "Croisement SMA 9/21 (1 m) + bracket — le visuel de la stratégie H1 (graphe NQ 1 m)";
+        Description = "Croisement SMA 9/21 (1 m) + zone de trade (bracket) — visuel de la stratégie H1 (graphe NQ 1 m)";
         SeparateWindow = false;
         AddLineSeries("SMA rapide (9)", Color.DodgerBlue, 2, LineStyle.Solid);
         AddLineSeries("SMA lente (21)", Color.Orange, 2, LineStyle.Solid);
-        AddLineSeries("SL (bracket)", Color.Red, 1, LineStyle.Dash);
-        AddLineSeries("TP (bracket)", Color.LimeGreen, 1, LineStyle.Dash);
-        AddLineSeries("signaux", Color.FromArgb(0, 0, 0, 0), 1, LineStyle.Solid); // porte les marqueurs
     }
 
     protected override void OnInit()
@@ -79,10 +102,10 @@ public sealed class SmaBracketVisuelIndicator : Indicator
         _debut = CadreSeance.ParseHeure(EntreesDebutEt);
         _fin = CadreSeance.ParseHeure(EntreesFinEt);
         _flat = CadreSeance.ParseHeure(HeureFlatEt);
-        _sens = 0;
-        _stop = _take = double.NaN;
         _derniereBarreTraitee = DateTime.MinValue;
+        _dernierTempsBarre = DateTime.MinValue;
         _sortieUtc = DateTime.MinValue;
+        lock (_lock) { _trades.Clear(); _courant = null; }
     }
 
     protected override void OnUpdate(UpdateArgs args)
@@ -91,7 +114,14 @@ public sealed class SmaBracketVisuelIndicator : Indicator
             TraiterBarreClose(0);
         else if (Count > 1)
             TraiterBarreClose(1);
-        DessinerCourant(0);
+
+        // Prolonge les SMA sur la barre courante (sinon les courbes s'arrêtent une barre avant).
+        if (_cross.Pret)
+        {
+            SetValue(_cross.Rapide, LRapide, 0);
+            SetValue(_cross.Lente, LLente, 0);
+        }
+        _dernierTempsBarre = this.Time(0);
     }
 
     private void TraiterBarreClose(int offset)
@@ -115,73 +145,112 @@ public sealed class SmaBracketVisuelIndicator : Indicator
         }
 
         // 1) EN POSITION : bracket simulé (SL prioritaire), puis flat forcé. Ignore les croisements.
-        if (_sens != 0)
+        if (_courant is { } tr)
         {
-            if ((_sens > 0 && bas <= _stop) || (_sens < 0 && haut >= _stop))
-                Sortir(offset, finUtc, Color.Red);
-            else if ((_sens > 0 && haut >= _take) || (_sens < 0 && bas <= _take))
-                Sortir(offset, finUtc, Color.LimeGreen);
+            if ((tr.Sens > 0 && bas <= tr.Sl) || (tr.Sens < 0 && haut >= tr.Sl))
+                Fermer(ouverture, tr.Sl, 'S');
+            else if ((tr.Sens > 0 && haut >= tr.Tp) || (tr.Sens < 0 && bas <= tr.Tp))
+                Fermer(ouverture, tr.Tp, 'T');
             else if (SeanceNY && m >= _flat)
-                Sortir(offset, finUtc, Color.Orange);
+                Fermer(ouverture, close, 'F');
         }
-        // 2) ENTRÉE sur croisement (flat + fenêtre[si séance NY] + cooldown + ATR prêt).
+        // 2) ENTRÉE sur croisement (flat + [fenêtre si séance NY] + cooldown + ATR prêt).
         else if (_cross.Croisement != 0 && _atr.Pret && CooldownOk(finUtc)
                  && (!SeanceNY || (m > _debut && m <= _fin)))
         {
-            _sens = _cross.Croisement;
+            int sens = _cross.Croisement;
             double r = StopMult * _atr.Valeur;
-            _stop = _sens > 0 ? close - r : close + r;
-            _take = _sens > 0 ? close + TpR * r : close - TpR * r;
-            LinesSeries[LMarqueurs].SetMarker(offset, new IndicatorLineMarker
+            var t = new Trade
             {
-                Color = _sens > 0 ? Color.LimeGreen : Color.Red,
-                UpperIcon = _sens > 0 ? IndicatorLineMarkerIconType.None : IndicatorLineMarkerIconType.DownArrow,
-                BottomIcon = _sens > 0 ? IndicatorLineMarkerIconType.UpArrow : IndicatorLineMarkerIconType.None,
-            });
+                EntreeTemps = ouverture,
+                EntreePrix = close,
+                Sens = sens,
+                Sl = sens > 0 ? close - r : close + r,
+                Tp = sens > 0 ? close + TpR * r : close - TpR * r,
+            };
+            lock (_lock)
+            {
+                _trades.Add(t);
+                if (_trades.Count > MaxTrades) _trades.RemoveAt(0);
+                _courant = t;
+            }
         }
+    }
 
-        DessinerNiveaux(offset);
+    private void Fermer(DateTime temps, double niveau, char type)
+    {
+        lock (_lock)
+        {
+            if (_courant is null) return;
+            _courant.SortieTemps = temps;
+            _courant.SortieNiveau = niveau;
+            _courant.SortieType = type;
+            _courant = null;
+        }
+        _sortieUtc = temps.AddMinutes(1);
     }
 
     private bool CooldownOk(DateTime finUtc) =>
         _sortieUtc == DateTime.MinValue || (finUtc - _sortieUtc).TotalMinutes >= CooldownMin;
 
-    private void Sortir(int offset, DateTime finUtc, Color couleur)
+    // ─────────────────────────────────────────────────────── LE RENDU DE LA ZONE ──────
+    public override void OnPaintChart(PaintChartEventArgs args)
     {
-        _sens = 0;
-        _stop = _take = double.NaN;
-        _sortieUtc = finUtc;
-        LinesSeries[LMarqueurs].SetMarker(offset, new IndicatorLineMarker
+        var conv = this.CurrentChart?.MainWindow?.CoordinatesConverter;
+        if (conv is null) return;
+        Trade[] trades;
+        DateTime finOuverte;
+        lock (_lock) { trades = _trades.ToArray(); finOuverte = _dernierTempsBarre; }
+
+        var gr = args.Graphics;
+        var rect = args.Rectangle;
+        foreach (var t in trades)
         {
-            Color = couleur,
-            UpperIcon = IndicatorLineMarkerIconType.FillCircle,
-        });
+            var borneDroite = t.SortieTemps ?? finOuverte;      // trade ouvert : jusqu'à la barre courante
+            float xL = (float)conv.GetChartX(t.EntreeTemps);
+            float xR = (float)conv.GetChartX(borneDroite);
+            if (xR < xL) xR = xL;
+            if (xR < rect.Left - 4 || xL > rect.Right + 4) continue;   // hors écran : rien à peindre
+            float w = Math.Max(2f, xR - xL);
+
+            float yEntree = (float)conv.GetChartY(t.EntreePrix);
+            float ySl = (float)conv.GetChartY(t.Sl);
+            float yTp = (float)conv.GetChartY(t.Tp);
+
+            // Encadré VERT (entrée → TP, côté gagnant) et ROUGE (entrée → SL, côté perdant).
+            RectVertical(gr, _fillVert, _penVert, xL, w, yEntree, yTp);
+            RectVertical(gr, _fillRouge, _penRouge, xL, w, yEntree, ySl);
+
+            // Flèche d'entrée (triangle plein dans le sens du trade), au prix d'entrée.
+            Triangle(gr, t.Sens > 0 ? _triLong : _triShort, xL, yEntree, t.Sens);
+
+            // Point de sortie, EXACTEMENT sur le niveau touché.
+            if (t.SortieTemps is not null)
+            {
+                var brush = t.SortieType switch { 'T' => _dotVert, 'S' => _dotRouge, _ => _dotOrange };
+                float yNiv = (float)conv.GetChartY(t.SortieNiveau);
+                gr.FillEllipse(brush, xR - 4f, yNiv - 4f, 8f, 8f);
+            }
+        }
     }
 
-    /// <summary>SL/TP tracés tant que la position simulée vit (sur la barre `offset`).</summary>
-    private void DessinerNiveaux(int offset)
+    private static void RectVertical(Graphics gr, Brush fill, Pen pen, float x, float w, float yA, float yB)
     {
-        SetValue(this.GetPrice(PriceType.Close, offset), LMarqueurs, offset);
-        if (_sens != 0)
-        {
-            SetValue(_stop, LSl, offset);
-            SetValue(_take, LTp, offset);
-        }
+        float top = Math.Min(yA, yB), h = Math.Max(1f, Math.Abs(yB - yA));
+        gr.FillRectangle(fill, x, top, w, h);
+        gr.DrawRectangle(pen, x, top, w, h);
     }
 
-    /// <summary>Prolonge les SMA (et les niveaux) sur la barre COURANTE en formation, pour
-    /// que les courbes ne s'arrêtent pas une barre avant le bord droit.</summary>
-    private void DessinerCourant(int offset)
+    private static void Triangle(Graphics gr, Brush brush, float x, float y, int sens)
     {
-        if (_cross.Pret)
+        // Long : pointe vers le haut, sous le prix d'entrée ; short : pointe vers le bas, au-dessus.
+        float d = sens > 0 ? 1f : -1f;   // d>0 : le triangle descend sous l'entrée (base en bas)
+        var pts = new[]
         {
-            SetValue(_cross.Rapide, LRapide, offset);
-            SetValue(_cross.Lente, LLente, offset);
-        }
-        if (_sens != 0)
-        {
-            SetValue(_stop, LSl, offset);
-            SetValue(_take, LTp, offset);
-        }
+            new PointF(x - 5f, y + 9f * d),
+            new PointF(x + 5f, y + 9f * d),
+            new PointF(x, y + 2f * d),
+        };
+        gr.FillPolygon(brush, pts);
     }
 }
