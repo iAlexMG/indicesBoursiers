@@ -61,6 +61,12 @@ public abstract class HybrideStrategyBase : Strategy
     [InputParameter("Validité d'une proposition (secondes, mode CONFIRMATION)", 12, 10, 600, 5, 0)]
     public int PropositionValiditeS = 120;
 
+    // Coché : au démarrage, fait apparaître UN pop-up de confirmation dont le « OK » ne fait
+    // que journaliser — AUCUN ordre, aucun compte requis. Sert à valider le mécanisme
+    // (affichage + clic) sans risque, en mode SHADOW. À décocher ensuite.
+    [InputParameter("Test : pop-up de confirmation au démarrage (aucun ordre)", 14)]
+    public bool TestPopup = false;
+
     [InputParameter("Contrats", 3, 1, 10, 1, 0)]
     public int Contrats = 1;
 
@@ -259,6 +265,12 @@ public abstract class HybrideStrategyBase : Strategy
         _horloge = new System.Threading.Timer(_ => TicHorloge(), null,
                                               TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
         _demarre = true;
+
+        // Test du pop-up (aucun ordre) : valide affichage + clic sans risque, même en shadow.
+        if (TestPopup)
+            lock (Verrou)
+                Proposer("TEST — pop-up de confirmation", "clic sur OK = AUCUN ordre, juste un test",
+                         () => this.LogInfo("✅ TEST : pop-up CONFIRMÉ par clic — le mécanisme fonctionne."));
     }
 
     // ============================================================================ ARRÊT =

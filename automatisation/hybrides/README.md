@@ -130,10 +130,17 @@ d'abord la sonde, puis les 3 hybrides en séance.
 
 ## À SONDER (ce que la compile ne prouve pas — la sonde et la 1re séance trancheront)
 
-0. **Le pop-up de CONFIRMATION** : le rendu du `Utils.Alert` se vérifie sans risque (laisser
-   une proposition EXPIRER = prouve l'affichage et le journal) ; le déclenchement de
-   `ActionOnConfirm` au clic, lui, ne se prouve qu'en ACCEPTANT — faire ce premier essai
-   sur **MNQ ×1** (2 $/pt), bracket attaché, en surveillant.
+0. **Le pop-up de CONFIRMATION — validation SANS RISQUE via le bouton de test** : cocher
+   **« Test : pop-up de confirmation au démarrage (aucun ordre) »** et lancer la stratégie
+   **en mode SHADOW** (aucun compte requis). Au démarrage, un pop-up apparaît ; le « OK » ne
+   fait que journaliser (`✅ TEST : pop-up CONFIRMÉ par clic`). Ça valide TOUT le mécanisme —
+   affichage + clic → `ActionOnConfirm` — sans aucun ordre. Laisser expirer valide l'affichage
+   + l'expiration. **Ensuite seulement**, pour prouver le clic → ordre RÉEL : mode
+   CONFIRMATION sur **MNQ ×1** (2 $/pt), « Autoriser un compte réel » coché, en surveillant.
+   ⚠️ **H2 en CONFIRMATION** : le stop suiveur voudrait se modifier à CHAQUE barre → un
+   pop-up par barre, impraticable. À revoir (auto-appliquer les resserrements de stop, qui ne
+   font que réduire le risque, et ne demander confirmation que des ENTRÉES) avant d'utiliser
+   H2 en confirmation. H1/H3 n'ont pas ce souci (une décision par entrée/sortie).
 1. `SlTpHolder` en `Offset` = ticks depuis le fill (sémantique attendue ; étape A vérifie
    « SL posé à ~20 ticks »).
 2. Le sort du bracket après `Position.Close()` (attendu : annulé ; étape A3 le mesure).

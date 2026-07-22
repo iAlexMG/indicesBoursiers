@@ -1,5 +1,21 @@
 # Journal du projet — décisions datées & mesures clés
 
+## 2026-07-22 — Validation du pop-up CONFIRMATION : bouton de test sans risque
+
+User (après les 3 visuels) choisit de valider le pop-up de CONFIRMATION. Revue du code :
+`Core.Alert(Utils.Alert{ActionOnConfirm})` est bien LE mécanisme prévu (mesuré : les autres —
+`PushDealTicket`, `OnAskUserConfirmationForTradingWithRunningEmulator` — ne conviennent pas) ;
+code correct. Le seul inconnu = le comportement à l'exécution (le pop-up s'affiche ? le clic
+déclenche `ActionOnConfirm` ?). **Ajout d'un bouton `Test : pop-up de confirmation au
+démarrage (aucun ordre)`** dans HybrideStrategyBase : coché, fait apparaître UN pop-up au
+démarrage dont le « OK » ne fait que logger (`✅ TEST : pop-up CONFIRMÉ`) — aucun ordre, aucun
+compte, marche même en SHADOW. Valide affichage + clic + expiration sans risque. Compile 0/0,
+DLL redéployée. 🪤 **Noté : H2 en CONFIRMATION spammerait un pop-up par barre** (le suiveur
+veut se modifier chaque barre) → à revoir (auto-appliquer les resserrements de stop, ne
+confirmer que les entrées) avant d'utiliser H2 en confirmation ; H1/H3 OK.
+**RESTE user** : cocher le test, lancer H1 en shadow, voir le pop-up, cliquer OK → le log
+confirme. Puis (optionnel) 1er ordre réel MNQ ×1 en CONFIRMATION sur Apex.
+
 ## 2026-07-22 — Visuel H3 : l'annulation (les 3 visuels sont faits)
 
 Dernier visuel : `indicators/SmaAnnuleVisuel/` (« Hybride H3 SMA Annulation (visuel) »,
