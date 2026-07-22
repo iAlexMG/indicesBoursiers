@@ -104,8 +104,9 @@ public sealed class SmaBracketVisuelIndicator : Indicator
     private readonly Pen _dotBord = new(Color.FromArgb(230, 20, 24, 30), 1.2f);
     private readonly Brush _triLong = new SolidBrush(Color.LimeGreen);
     private readonly Brush _triShort = new SolidBrush(Color.Red);
-    private readonly Brush _txtVert = new SolidBrush(Color.FromArgb(235, 190, 255, 190));
-    private readonly Brush _txtRouge = new SolidBrush(Color.FromArgb(235, 255, 180, 165));
+    private readonly Brush _txtVert = new SolidBrush(Color.FromArgb(240, 190, 255, 190));
+    private readonly Brush _txtRouge = new SolidBrush(Color.FromArgb(240, 255, 180, 165));
+    private readonly Brush _pillBg = new SolidBrush(Color.FromArgb(195, 14, 18, 24));
     private readonly Brush _panelBg = new SolidBrush(Color.FromArgb(165, 18, 22, 28));
     private readonly Pen _panelBord = new(Color.FromArgb(90, 120, 130, 140), 1f);
     private readonly Brush _panelTitre = new SolidBrush(Color.FromArgb(235, 225, 231, 238));
@@ -272,9 +273,15 @@ public sealed class SmaBracketVisuelIndicator : Indicator
                 if (AfficherEtiquettes && w >= 6f)
                 {
                     bool gain = t.Pts >= 0;
-                    string s = $"{t.Pts.ToString("+0.0;-0.0", Inv)}  ({t.R.ToString("+0.0;-0.0", Inv)}R)";
-                    float ty = gain ? yNiv - 16f : yNiv + 5f;
-                    gr.DrawString(s, _font, gain ? _txtVert : _txtRouge, xR + 6f, ty);
+                    string s = $"{t.Pts.ToString("+0.0;-0.0", Inv)} ({t.R.ToString("+0.0;-0.0", Inv)}R)";
+                    var sz = gr.MeasureString(s, _font);
+                    // Au bout de la zone (au-dessus du TP / sous le SL), centré sur la boîte,
+                    // avec un fond sombre : lisible même par-dessus les chandelles.
+                    float lx = xL + w / 2f - sz.Width / 2f;
+                    lx = Math.Max(rect.Left + 2f, Math.Min(lx, rect.Right - sz.Width - 6f));
+                    float ly = gain ? yTp - sz.Height - 3f : ySl + 3f;
+                    gr.FillRectangle(_pillBg, lx - 3f, ly - 1f, sz.Width + 6f, sz.Height + 2f);
+                    gr.DrawString(s, _font, gain ? _txtVert : _txtRouge, lx, ly);
                 }
             }
         }
