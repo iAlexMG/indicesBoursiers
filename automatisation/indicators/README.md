@@ -77,8 +77,21 @@ lignes SL (rouge pointillé) / TP (vert pointillé) pendant le trade, rond de so
 position. **Mêmes formules que la stratégie et le jumeau LEAN** (Compile Include de
 `../hybrides/Indicateurs.cs` — une seule implémentation, parité C#↔LEAN mesurée à 0 écart).
 Décisions aux clôtures de barres ; n'émet rien. Compile **net10.0**.
-**Déployer :** `powershell -File indicators\SmaBracketVisuel\deploy.ps1`. (Visuels H2/H3 :
-sur demande.) L'ancien `OrbNqVisuel` est supprimé (l'ORB est abandonné).
+**Déployer :** `powershell -File indicators\SmaBracketVisuel\deploy.ps1`. L'ancien
+`OrbNqVisuel` est supprimé (l'ORB est abandonné). Rendu peint en `OnPaintChart`
+(zones vert/rouge, pointillés SL/TP, points sur niveaux, panneau de résultats +
+étiquettes par trade — réf `System.Drawing.Common` requise).
+
+## `Hybride H2 SMA Suiveur (visuel)` — le stop suiveur en escalier (2026-07-22)
+
+Le VISUEL de la stratégie `Hybride H2 SMA Suiveur (NQ)`, sur un graphe **NQ 1 m**. Ce que
+H2 prouve = la MODIFICATION du stop : le visuel dessine le **stop suiveur en ESCALIER**
+(ligne ambre, une marche par barre), avec la **bande entre l'entrée et le stop** qui vire du
+**rouge** (encore à risque, stop sous l'entrée) au **vert** (profit verrouillé, stop passé de
+l'autre côté). Pas de TP (H2 n'en a pas). Point de sortie coloré selon gain/perte,
+étiquette (points + R), panneau de résultats. Mêmes formules que la stratégie et le jumeau
+`sma_suiveur_nq.py` (Compile Include de `hybrides/Indicateurs.cs`). net10.0.
+**Déployer :** `powershell -File indicators\SmaSuiveurVisuel\deploy.ps1`. (Visuel H3 : sur demande.)
 
 ## `Signaux NQ (strat. avancée)` — marqueurs entrée/sortie sur le graphe
 

@@ -1,5 +1,17 @@
 # Journal du projet — décisions datées & mesures clés
 
+## 2026-07-22 — Visuel H2 (H1 jugé complet, on passe à H2)
+
+User : H1 complet (stratégie + jumeau + visuel validés) → passer à H2 (option A ; le pop-up
+CONFIRMATION, partagé, reste à valider plus tard). H2 = la MODIFICATION : nouveau visuel
+`indicators/SmaSuiveurVisuel/` (« Hybride H2 SMA Suiveur (visuel) », net10.0) qui rejoue
+`SmaSuiveurHybride`/`sma_suiveur_nq.py` et dessine le **stop suiveur en ESCALIER** (ligne
+ambre, une marche/barre — le mécanisme prouvé), avec la **bande entrée↔stop qui vire
+rouge (à risque) → vert (profit verrouillé)** quand le stop passe l'entrée. Pas de TP.
+Point de sortie coloré par gain/perte, étiquette (pts+R), panneau (trades, % gagnants,
+cumul). Trail = liste (temps, stop) par barre, bornée à 1000 trades. Compile 0 erreur,
+déployé. À re-valider à l'œil. Reste : visuel H3 (sur demande) + valider pop-up CONFIRMATION.
+
 ## 2026-07-22 — Visuel H1 : rendu de la ZONE de trade en OnPaintChart
 
 Retour utilisateur (visuel validé mais 3 défauts de rendu) : (1) les points de sortie
