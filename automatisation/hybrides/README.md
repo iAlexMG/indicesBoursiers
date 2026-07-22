@@ -132,9 +132,10 @@ d'abord la sonde, puis les 3 hybrides en séance.
 
 ## À SONDER (ce que la compile ne prouve pas — la sonde et la 1re séance trancheront)
 
-0. ✅ **Le pop-up de CONFIRMATION — MÉCANISME VALIDÉ le 2026-07-22** (affichage + clic →
-   `ActionOnConfirm`, via le bouton de test, en shadow, sans ordre). Reste à prouver : le
-   clic → ordre RÉEL (Test 2, MNQ ×1 sur Apex). **Validation SANS RISQUE via le bouton de test** : cocher
+0. ✅✅ **CONFIRMATION VALIDÉ DE BOUT EN BOUT le 2026-07-22.** Test 1 : affichage + clic →
+   `ActionOnConfirm` (bouton de test, shadow, sans ordre). **Test 2 : clic → VRAI ORDRE sur
+   Apex (MNQ ×1) + bracket SL/TP attaché correctement** — la chaîne live est prouvée en réel.
+   Rappel du **bouton de test SANS RISQUE** (pour re-vérifier le mécanisme n'importe quand) : cocher
    **« Test : pop-up de confirmation au démarrage (aucun ordre) »** et lancer la stratégie
    **en mode SHADOW** (aucun compte requis). Au démarrage, un pop-up apparaît ; le « OK » ne
    fait que journaliser (`✅ TEST : pop-up CONFIRMÉ par clic`). Ça valide TOUT le mécanisme —
@@ -145,9 +146,10 @@ d'abord la sonde, puis les 3 hybrides en séance.
    AUTOMATIQUEMENT (resserrement = réduction du risque), le flat aussi ; seules les entrées
    et sorties sur signal demandent un clic → plus de pop-up par barre. Interprétation Apex à
    confirmer par l'utilisateur (l'humain initie chaque position, la protection est auto).
-1. `SlTpHolder` en `Offset` = ticks depuis le fill (sémantique attendue ; étape A vérifie
-   « SL posé à ~20 ticks »).
-2. Le sort du bracket après `Position.Close()` (attendu : annulé ; étape A3 le mesure).
+1. ✅ `SlTpHolder` en `Offset` = **ticks** depuis le fill — CONFIRMÉ au Test 2 (SL/TP posés à
+   la bonne distance sur Apex).
+2. ✅ Le bracket **S'ATTACHE** à l'ordre market sur Rithmic/Apex — CONFIRMÉ au Test 2. (Le sort
+   du bracket après `Position.Close()` — annulé ? — reste à observer, mais mineur.)
 3. L'ordre des événements `PositionRemoved` / `TradeAdded` (la raison de sortie « AUTRE »
    dans le journal = fill arrivé après ; compté prudemment côté garde-fou).
 4. `[InputParameter]` de type `Account` dans le panneau (quasi certain — étude §2).

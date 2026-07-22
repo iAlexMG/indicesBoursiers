@@ -1,5 +1,22 @@
 # Journal du projet — décisions datées & mesures clés
 
+## 2026-07-22 — ✅ TEST 2 : PREMIER ORDRE RÉEL SUR APEX — la chaîne live est PROUVÉE
+
+Le user passe H1 en CONFIRMATION sur **MNQ ×1**, compte Apex, « Autoriser un compte réel »
+coché. Sur un croisement, le pop-up apparaît, il clique OK → **un vrai ordre market part et
+le bracket SL/TP s'attache correctement** (vérifié dans *Orders* : « les SL/TP se sont bien
+ajoutés »). **Ça prouve TOUTE la chaîne d'exécution live** : confirmation → clic → ordre réel
+→ bracket attaché sur Rithmic/Apex. Deux inconnues du README §À sonder tombent d'un coup :
+le bracket S'ATTACHE (pt 2) et l'offset SL/TP est bien en TICKS (pt 1, le SL/TP à la bonne
+distance). **Objectif POC atteint pour l'entrée + bracket, en réel.** Restent non prouvés sur
+un VRAI ordre (mais validés en backtest/shadow/visuel) : la modification H2, l'annulation H3,
+le flat auto — incrémentaux, la fondation (ordre + bracket + confirmation) est faite.
+🎯 **Règles Apex tranchées par le user** (mémoire `apex-regles-automatisation`) : frontière =
+supervision humaine active → **CONFIRMATION = CONFORME**, AUTO = du mauvais côté, SHADOW = hors
+portée. Ça valide la décision de design de la veille (l'humain initie chaque position). ⚠️ En
+découle : **AUTO ne doit JAMAIS tourner sur le compte Apex** (proposer un garde-fou qui le
+refuse). Nettoyage user : décocher « Autoriser un compte réel », fermer la position de test.
+
 ## 2026-07-22 — CONFIRMATION réglé pour H2 : ne confirmer que ce qui OUVRE/FERME
 
 Après validation du mécanisme (Test 1), correctif du mode CONFIRMATION (le user me laisse
