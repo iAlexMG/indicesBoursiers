@@ -91,7 +91,21 @@ H2 prouve = la MODIFICATION du stop : le visuel dessine le **stop suiveur en ESC
 l'autre côté). Pas de TP (H2 n'en a pas). Point de sortie coloré selon gain/perte,
 étiquette (points + R), panneau de résultats. Mêmes formules que la stratégie et le jumeau
 `sma_suiveur_nq.py` (Compile Include de `hybrides/Indicateurs.cs`). net10.0.
-**Déployer :** `powershell -File indicators\SmaSuiveurVisuel\deploy.ps1`. (Visuel H3 : sur demande.)
+**Déployer :** `powershell -File indicators\SmaSuiveurVisuel\deploy.ps1`.
+
+## `Hybride H3 SMA Annulation (visuel)` — l'annulation du bracket (2026-07-22)
+
+Le VISUEL de la stratégie `Hybride H3 SMA Annulation (NQ)`, sur un graphe **NQ 1 m**. H3 =
+le bracket de H1 (zones vert/rouge, pointillés SL/TP) **plus** une sortie au croisement
+inverse qui **annule** le bracket. Le visuel distingue les 3 issues : TP (cercle vert sur la
+ligne), SL (cercle rouge), et **ANNULATION** (**losange** au prix de sortie, au milieu de la
+zone, les deux côtés estompés — ni SL ni TP atteint). Panneau : TP / SL / annul. Mêmes
+formules que la stratégie et le jumeau `sma_annule_nq.py`. net10.0.
+**Déployer :** `powershell -File indicators\SmaAnnuleVisuel\deploy.ps1`.
+
+**Les 3 visuels hybrides partagent** : mêmes SMA 9/21 + ATR14 (Compile Include de
+`hybrides/Indicateurs.cs`), rendu `OnPaintChart` (réf `System.Drawing.Common` du `bin\System`),
+panneau de résultats + étiquettes (points + R), mode 24 h par défaut.
 
 ## `Signaux NQ (strat. avancée)` — marqueurs entrée/sortie sur le graphe
 

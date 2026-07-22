@@ -1,5 +1,18 @@
 # Journal du projet — décisions datées & mesures clés
 
+## 2026-07-22 — Visuel H3 : l'annulation (les 3 visuels sont faits)
+
+Dernier visuel : `indicators/SmaAnnuleVisuel/` (« Hybride H3 SMA Annulation (visuel) »,
+net10.0) qui rejoue `SmaAnnuleHybride`/`sma_annule_nq.py`. H3 = le bracket de H1 (zones
+vert/rouge, pointillés SL/TP) + sortie au croisement inverse qui ANNULE le bracket. Le
+visuel distingue les 3 issues : TP (cercle vert sur la ligne, zone verte forte), SL (cercle
+rouge, zone rouge forte), **ANNULATION** (**losange** au prix de sortie, au milieu de la
+zone, les DEUX côtés estompés — ni SL ni TP atteint). Panneau : TP / SL / annul. Compile 0
+erreur, déployé. **Les 3 visuels hybrides sont désormais faits** (SmaBracketVisuel /
+SmaSuiveurVisuel / SmaAnnuleVisuel), même socle (Indicateurs.cs, OnPaintChart, panneau).
+**RESTE : valider le pop-up CONFIRMATION (partagé, jamais testé à l'exécution) ; phase 4
+(parité shadow-vs-jumeau) ; question stops au support.**
+
 ## 2026-07-22 — Visuel H2 (H1 jugé complet, on passe à H2)
 
 User : H1 complet (stratégie + jumeau + visuel validés) → passer à H2 (option A ; le pop-up
