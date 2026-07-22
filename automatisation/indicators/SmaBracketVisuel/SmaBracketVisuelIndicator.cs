@@ -1,4 +1,6 @@
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Globalization;
 using TradingPlatform.BusinessLayer;
 using Hybrides;
 
@@ -9,13 +11,14 @@ namespace SmaBracketVisuel;
 /// EXACTE de la stratégie `Hybride H1 SMA Bracket (NQ)` et du jumeau `sma_bracket_nq.py`
 /// (mêmes classes d'indicateurs — Compile Include de hybrides/Indicateurs.cs).
 ///
-/// Rendu (2026-07-22, refonte du rendu) :
-///   - deux SMA du déclencheur (rapide 9 = bleue, lente 21 = orange) — en line series ;
-///   - pour CHAQUE trade, la ZONE peinte en `OnPaintChart` : encadré **vert** (entrée → TP,
-///     le côté gagnant) et **rouge** (entrée → SL, le côté perdant), du bord de l'entrée au
-///     bord de la sortie ; flèche d'entrée ; et **point de sortie posé EXACTEMENT sur le
-///     niveau touché** (haut du vert = TP, bas du rouge = SL). Plus de line series SL/TP
-///     (qui traçaient une oblique parasite et posaient le point au mauvais prix).
+/// Rendu (2026-07-22) : deux SMA (rapide 9 = bleue, lente 21 = orange) en line series ; le
+/// reste peint en `OnPaintChart`. Pour CHAQUE trade :
+///   - encadré **vert** (entrée → TP) et **rouge** (entrée → SL), de l'entrée à la sortie ;
+///     à la clôture, la zone ATTEINTE est mise en évidence (forte opacité) et l'autre estompée ;
+///   - **lignes pointillées** SL (rouge) et TP (vert) aux niveaux, + fine ligne d'entrée ;
+///   - flèche d'entrée (triangle) et **point de sortie posé EXACTEMENT sur le niveau touché** ;
+///   - **étiquette de résultat** du trade (points + R) près de la sortie.
+/// Plus un **panneau de résultats** (haut-droite) : trades, TP/SL, taux, cumul (points, R).
 /// Décisions AUX CLÔTURES de barres. N'émet rien (ni ordre, ni pop-up, ni journal).
 /// </summary>
 public sealed class SmaBracketVisuelIndicator : Indicator
@@ -50,14 +53,20 @@ public sealed class SmaBracketVisuelIndicator : Indicator
     [InputParameter("Restreindre à la séance NY (décoché = 24 h)", 9)]
     public bool SeanceNY = false;
 
-    private const int LRapide = 0, LLente = 1;   // seules les 2 SMA restent en line series
-    private const int MaxTrades = 1000;          // borne mémoire (les vieux trades tombent)
+    [InputParameter("Panneau de résultats", 10)]
+    public bool AfficherPanneau = true;
+
+    [InputParameter("Étiquette de résultat par trade", 11)]
+    public bool AfficherEtiquettes = true;
+
+    private const int LRapide = 0, LLente = 1;
+    private const int MaxTrades = 1000;
+    private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
     private DeclencheurSmaCross _cross = null!;
     private AtrWilder _atr = null!;
     private int _debut, _fin, _flat;
 
-    /// <summary>Un trade dessiné : entrée, niveaux, et sortie (temps + niveau touché).</summary>
     private sealed class Trade
     {
         public DateTime EntreeTemps;
@@ -66,6 +75,8 @@ public sealed class SmaBracketVisuelIndicator : Indicator
         public DateTime? SortieTemps;
         public double SortieNiveau;               // le prix EXACT où le trade s'est fermé
         public char SortieType;                   // 'T' TP, 'S' SL, 'F' flat
+        public double Pts;                         // résultat en points (signé)
+        public double R;                           // résultat en R (signé)
     }
 
     private readonly object _lock = new();
@@ -75,16 +86,33 @@ public sealed class SmaBracketVisuelIndicator : Indicator
     private DateTime _dernierTempsBarre = DateTime.MinValue;
     private DateTime _sortieUtc = DateTime.MinValue;
 
-    // GDI+ (créés une fois, réutilisés — patron VpSessionNq).
-    private readonly Brush _fillVert = new SolidBrush(Color.FromArgb(38, Color.LimeGreen));
-    private readonly Brush _fillRouge = new SolidBrush(Color.FromArgb(38, Color.OrangeRed));
-    private readonly Pen _penVert = new(Color.FromArgb(140, Color.LimeGreen), 1f);
-    private readonly Pen _penRouge = new(Color.FromArgb(140, Color.OrangeRed), 1f);
+    // GDI+ (créés une fois — patron VpSessionNq).
+    private readonly Brush _vFort = new SolidBrush(Color.FromArgb(90, Color.LimeGreen));
+    private readonly Brush _vNeutre = new SolidBrush(Color.FromArgb(34, Color.LimeGreen));
+    private readonly Brush _vFaible = new SolidBrush(Color.FromArgb(14, Color.LimeGreen));
+    private readonly Brush _rFort = new SolidBrush(Color.FromArgb(90, Color.OrangeRed));
+    private readonly Brush _rNeutre = new SolidBrush(Color.FromArgb(34, Color.OrangeRed));
+    private readonly Brush _rFaible = new SolidBrush(Color.FromArgb(14, Color.OrangeRed));
+    private readonly Pen _lnTp = new(Color.FromArgb(200, Color.LimeGreen), 1.2f) { DashStyle = DashStyle.Dash };
+    private readonly Pen _lnTpFort = new(Color.LimeGreen, 2.2f) { DashStyle = DashStyle.Dash };
+    private readonly Pen _lnSl = new(Color.FromArgb(200, Color.OrangeRed), 1.2f) { DashStyle = DashStyle.Dash };
+    private readonly Pen _lnSlFort = new(Color.OrangeRed, 2.2f) { DashStyle = DashStyle.Dash };
+    private readonly Pen _lnEntree = new(Color.FromArgb(120, Color.Gainsboro), 1f) { DashStyle = DashStyle.Dot };
     private readonly Brush _dotVert = new SolidBrush(Color.LimeGreen);
     private readonly Brush _dotRouge = new SolidBrush(Color.Red);
     private readonly Brush _dotOrange = new SolidBrush(Color.Orange);
+    private readonly Pen _dotBord = new(Color.FromArgb(230, 20, 24, 30), 1.2f);
     private readonly Brush _triLong = new SolidBrush(Color.LimeGreen);
     private readonly Brush _triShort = new SolidBrush(Color.Red);
+    private readonly Brush _txtVert = new SolidBrush(Color.FromArgb(235, 190, 255, 190));
+    private readonly Brush _txtRouge = new SolidBrush(Color.FromArgb(235, 255, 180, 165));
+    private readonly Brush _panelBg = new SolidBrush(Color.FromArgb(165, 18, 22, 28));
+    private readonly Pen _panelBord = new(Color.FromArgb(90, 120, 130, 140), 1f);
+    private readonly Brush _panelTitre = new SolidBrush(Color.FromArgb(235, 225, 231, 238));
+    private readonly Brush _panelPos = new SolidBrush(Color.FromArgb(235, 150, 230, 160));
+    private readonly Brush _panelNeg = new SolidBrush(Color.FromArgb(235, 240, 150, 130));
+    private readonly Font _font = new("Segoe UI", 8f);
+    private readonly Font _fontPan = new("Segoe UI", 9f);
 
     public SmaBracketVisuelIndicator()
     {
@@ -115,7 +143,6 @@ public sealed class SmaBracketVisuelIndicator : Indicator
         else if (Count > 1)
             TraiterBarreClose(1);
 
-        // Prolonge les SMA sur la barre courante (sinon les courbes s'arrêtent une barre avant).
         if (_cross.Pret)
         {
             SetValue(_cross.Rapide, LRapide, 0);
@@ -182,9 +209,13 @@ public sealed class SmaBracketVisuelIndicator : Indicator
         lock (_lock)
         {
             if (_courant is null) return;
-            _courant.SortieTemps = temps;
-            _courant.SortieNiveau = niveau;
-            _courant.SortieType = type;
+            var t = _courant;
+            t.SortieTemps = temps;
+            t.SortieNiveau = niveau;
+            t.SortieType = type;
+            t.Pts = (niveau - t.EntreePrix) * t.Sens;                    // points signés
+            double risque = Math.Abs(t.EntreePrix - t.Sl);
+            t.R = risque > 0 ? t.Pts / risque : 0;                       // en R (SL = -1, TP = +TpR)
             _courant = null;
         }
         _sortieUtc = temps.AddMinutes(1);
@@ -193,7 +224,7 @@ public sealed class SmaBracketVisuelIndicator : Indicator
     private bool CooldownOk(DateTime finUtc) =>
         _sortieUtc == DateTime.MinValue || (finUtc - _sortieUtc).TotalMinutes >= CooldownMin;
 
-    // ─────────────────────────────────────────────────────── LE RENDU DE LA ZONE ──────
+    // ─────────────────────────────────────────────────────── LE RENDU ────────────────
     public override void OnPaintChart(PaintChartEventArgs args)
     {
         var conv = this.CurrentChart?.MainWindow?.CoordinatesConverter;
@@ -204,47 +235,90 @@ public sealed class SmaBracketVisuelIndicator : Indicator
 
         var gr = args.Graphics;
         var rect = args.Rectangle;
+        gr.SmoothingMode = SmoothingMode.AntiAlias;
+
         foreach (var t in trades)
         {
-            var borneDroite = t.SortieTemps ?? finOuverte;      // trade ouvert : jusqu'à la barre courante
+            var borneDroite = t.SortieTemps ?? finOuverte;
             float xL = (float)conv.GetChartX(t.EntreeTemps);
             float xR = (float)conv.GetChartX(borneDroite);
             if (xR < xL) xR = xL;
-            if (xR < rect.Left - 4 || xL > rect.Right + 4) continue;   // hors écran : rien à peindre
+            if (xR < rect.Left - 4 || xL > rect.Right + 4) continue;
             float w = Math.Max(2f, xR - xL);
-
             float yEntree = (float)conv.GetChartY(t.EntreePrix);
             float ySl = (float)conv.GetChartY(t.Sl);
             float yTp = (float)conv.GetChartY(t.Tp);
 
-            // Encadré VERT (entrée → TP, côté gagnant) et ROUGE (entrée → SL, côté perdant).
-            RectVertical(gr, _fillVert, _penVert, xL, w, yEntree, yTp);
-            RectVertical(gr, _fillRouge, _penRouge, xL, w, yEntree, ySl);
+            // Zones : à la clôture, mettre en ÉVIDENCE le côté atteint, estomper l'autre.
+            Brush bVert = t.SortieType == 'T' ? _vFort : t.SortieType == 'S' ? _vFaible : _vNeutre;
+            Brush bRouge = t.SortieType == 'S' ? _rFort : t.SortieType == 'T' ? _rFaible : _rNeutre;
+            RectVertical(gr, bVert, xL, w, yEntree, yTp);
+            RectVertical(gr, bRouge, xL, w, yEntree, ySl);
 
-            // Flèche d'entrée (triangle plein dans le sens du trade), au prix d'entrée.
+            // Lignes pointillées SL/TP (+ fine ligne d'entrée), la touchée épaissie.
+            gr.DrawLine(t.SortieType == 'T' ? _lnTpFort : _lnTp, xL, yTp, xR, yTp);
+            gr.DrawLine(t.SortieType == 'S' ? _lnSlFort : _lnSl, xL, ySl, xR, ySl);
+            gr.DrawLine(_lnEntree, xL, yEntree, xR, yEntree);
+
             Triangle(gr, t.Sens > 0 ? _triLong : _triShort, xL, yEntree, t.Sens);
 
-            // Point de sortie, EXACTEMENT sur le niveau touché.
             if (t.SortieTemps is not null)
             {
                 var brush = t.SortieType switch { 'T' => _dotVert, 'S' => _dotRouge, _ => _dotOrange };
                 float yNiv = (float)conv.GetChartY(t.SortieNiveau);
-                gr.FillEllipse(brush, xR - 4f, yNiv - 4f, 8f, 8f);
+                gr.FillEllipse(brush, xR - 4.5f, yNiv - 4.5f, 9f, 9f);
+                gr.DrawEllipse(_dotBord, xR - 4.5f, yNiv - 4.5f, 9f, 9f);
+
+                if (AfficherEtiquettes && w >= 6f)
+                {
+                    bool gain = t.Pts >= 0;
+                    string s = $"{t.Pts.ToString("+0.0;-0.0", Inv)}  ({t.R.ToString("+0.0;-0.0", Inv)}R)";
+                    float ty = gain ? yNiv - 16f : yNiv + 5f;
+                    gr.DrawString(s, _font, gain ? _txtVert : _txtRouge, xR + 6f, ty);
+                }
             }
         }
+
+        if (AfficherPanneau) DessinerPanneau(gr, rect, trades);
     }
 
-    private static void RectVertical(Graphics gr, Brush fill, Pen pen, float x, float w, float yA, float yB)
+    private void DessinerPanneau(Graphics gr, Rectangle rect, Trade[] trades)
+    {
+        int nb = 0, tp = 0, sl = 0;
+        double cumPts = 0, cumR = 0;
+        foreach (var t in trades)
+        {
+            if (t.SortieTemps is null) continue;
+            nb++; cumPts += t.Pts; cumR += t.R;
+            if (t.SortieType == 'T') tp++; else if (t.SortieType == 'S') sl++;
+        }
+        double taux = (tp + sl) > 0 ? 100.0 * tp / (tp + sl) : 0;
+
+        string l1 = "H1 SMA Bracket";
+        string l2 = $"Trades {nb}   ·   TP {tp} / SL {sl}   ·   {taux.ToString("0", Inv)}%";
+        string l3 = $"Cumul  {cumPts.ToString("+0.0;-0.0;0.0", Inv)} pts   ·   {cumR.ToString("+0.0;-0.0;0.0", Inv)} R";
+
+        float wMax = 0;
+        foreach (var s in new[] { l1, l2, l3 }) wMax = Math.Max(wMax, gr.MeasureString(s, _fontPan).Width);
+        float pw = wMax + 20f, ph = 62f;
+        float px = rect.Right - pw - 12f, py = rect.Top + 12f;
+
+        gr.FillRectangle(_panelBg, px, py, pw, ph);
+        gr.DrawRectangle(_panelBord, px, py, pw, ph);
+        gr.DrawString(l1, _fontPan, _panelTitre, px + 10f, py + 6f);
+        gr.DrawString(l2, _fontPan, _panelTitre, px + 10f, py + 23f);
+        gr.DrawString(l3, _fontPan, cumPts >= 0 ? _panelPos : _panelNeg, px + 10f, py + 40f);
+    }
+
+    private static void RectVertical(Graphics gr, Brush fill, float x, float w, float yA, float yB)
     {
         float top = Math.Min(yA, yB), h = Math.Max(1f, Math.Abs(yB - yA));
         gr.FillRectangle(fill, x, top, w, h);
-        gr.DrawRectangle(pen, x, top, w, h);
     }
 
     private static void Triangle(Graphics gr, Brush brush, float x, float y, int sens)
     {
-        // Long : pointe vers le haut, sous le prix d'entrée ; short : pointe vers le bas, au-dessus.
-        float d = sens > 0 ? 1f : -1f;   // d>0 : le triangle descend sous l'entrée (base en bas)
+        float d = sens > 0 ? 1f : -1f;
         var pts = new[]
         {
             new PointF(x - 5f, y + 9f * d),

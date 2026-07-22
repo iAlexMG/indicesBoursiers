@@ -12,7 +12,14 @@ entrée→TP + **rouge** entrée→SL, de la barre d'entrée à la barre de sort
 (triangle) ; **point de sortie posé EXACTEMENT sur le niveau touché** (FillEllipse à
 `GetChartY(niveau)`). Ajout de la réf `System.Drawing.Common` (bin\System) au csproj (comme
 VpSessionNq). Liste de trades bornée (1000), clipping hors-écran. Compile 0 erreur (13 warns
-CA1416 Windows-only, bénins), déployé. À re-valider à l'œil.
+CA1416 Windows-only, bénins), déployé. **✅ VALIDÉ à l'œil par le user** (capture 12:04 :
+boîtes + points sur niveaux OK).
+**Enrichissement (même jour, 3 retours user)** : (1) la zone ATTEINTE est mise en évidence
+(forte opacité) et l'autre estompée selon SL/TP touché ; (2) **lignes pointillées** SL/TP
+réajoutées par-dessus les zones (+ fine ligne d'entrée), la touchée épaissie ; (3) **panneau
+de résultats** haut-droite (trades, TP/SL, taux, cumul points + R) + **étiquette par trade**
+(points + R près de la sortie). Résultat par trade calculé des niveaux stockés (pts signés,
+R = pts/risque ; SL = -1R, TP = +TpR). 2 params d'affichage (panneau, étiquettes). Déployé.
 
 ## 2026-07-20 (soir) — MODE 24 H : interrupteur « Restreindre à la séance NY »
 
