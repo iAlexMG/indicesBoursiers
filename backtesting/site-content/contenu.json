@@ -70,6 +70,7 @@
         ]
       },
       "items": [
+        {"id": "fig-signal", "type": "figure", "url": "assets/indices/backtesting/figures/signal-buyhold.png", "titre": {"fr": "Le signal — ou son absence", "en": "The signal — or its absence"}, "description": {"fr": "Un seul achat au départ, tenu jusqu'au bout : la référence sans décision. Les marqueurs sont les fills réellement exécutés par LEAN.", "en": "A single buy at the start, held to the end: the no-decision benchmark. The markers are the fills actually executed by LEAN."}},
         {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-buyhold.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "Un contrat tenu quarante jours : l'indice perd 1,3 %, le compte 8,2 % — le levier en une image.", "en": "One contract held for forty days: the index loses 1.3%, the account 8.2% — leverage in one picture."}}
       ],
       "texte": {
@@ -104,6 +105,7 @@
         ]
       },
       "items": [
+        {"id": "fig-signal", "type": "figure", "url": "assets/indices/backtesting/figures/signal-sma.png", "titre": {"fr": "Le signal : croisement SMA 9/21", "en": "The signal: SMA 9/21 crossover"}, "description": {"fr": "Les deux moyennes sur barres 15 m et les entrées/sorties réellement exécutées (fills LEAN), zoomées sur la période la plus active. Indicateur recalculé depuis le 1 m — rien n'est figé.", "en": "The two averages on 15-minute bars and the actually-executed entries/exits (LEAN fills), zoomed on the most active window. Indicator recomputed from the 1m — nothing hard-coded."}},
         {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-sma.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "+27,8 % en juin, −25,5 % en juillet : la frontière hors échantillon coupe la courbe en deux histoires opposées.", "en": "+27.8% in June, −25.5% in July: the out-of-sample boundary cuts the curve into two opposite stories."}}
       ],
       "texte": {
@@ -138,6 +140,7 @@
         ]
       },
       "items": [
+        {"id": "fig-signal", "type": "figure", "url": "assets/indices/backtesting/figures/signal-macd.png", "titre": {"fr": "Le signal : MACD 12/26/9", "en": "The signal: MACD 12/26/9"}, "description": {"fr": "Le MACD et son signal sous le prix, et les fills LEAN autour des croisements — filtrés par le régime de fond.", "en": "The MACD and its signal below the price, and the LEAN fills around the crossovers — filtered by the background regime."}},
         {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-macd.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "Tout le gain se construit en juin ; à partir de la frontière hors échantillon, la courbe ne fait que rendre.", "en": "All the gain is built in June; from the out-of-sample boundary on, the curve only gives back."}}
       ],
       "texte": {
@@ -172,6 +175,7 @@
         ]
       },
       "items": [
+        {"id": "fig-signal", "type": "figure", "url": "assets/indices/backtesting/figures/signal-rsi.png", "titre": {"fr": "Le signal : RSI 9 (30/70)", "en": "The signal: RSI 9 (30/70)"}, "description": {"fr": "Le RSI sur barres 3 m avec ses seuils, et les rares entrées réellement prises : le filtre de régime et le cooldown suppriment presque tout.", "en": "The RSI on 3-minute bars with its thresholds, and the few entries actually taken: the regime filter and cooldown suppress almost everything."}},
         {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-rsi.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "Six trades par moitié : une courbe presque plate, un drawdown de 3,3 % — la discrétion a un mérite, pas un edge.", "en": "Six trades per half: a nearly flat curve, a 3.3% drawdown — discretion has a merit, not an edge."}}
       ],
       "texte": {
@@ -206,6 +210,7 @@
         ]
       },
       "items": [
+        {"id": "fig-signal", "type": "figure", "url": "assets/indices/backtesting/figures/signal-bollinger.png", "titre": {"fr": "Le signal : bandes de Bollinger 20 / 2σ", "en": "The signal: Bollinger Bands 20 / 2σ"}, "description": {"fr": "Les bandes sur barres 5 m et les fills LEAN aux touches de bande, dans le sens du régime.", "en": "The bands on 5-minute bars and the LEAN fills at band touches, in the direction of the regime."}},
         {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-bollinger.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "Positive avant ET après la frontière hors échantillon — sur 50 ordres et une seule fenêtre : candidate, pas preuve.", "en": "Positive before AND after the out-of-sample boundary — on 50 orders and a single window: a candidate, not proof."}}
       ],
       "texte": {
@@ -240,6 +245,7 @@
         ]
       },
       "items": [
+        {"id": "fig-signal", "type": "figure", "url": "assets/indices/backtesting/figures/signal-risque.png", "titre": {"fr": "Le signal : RSI 9 + stops ATR", "en": "The signal: RSI 9 + ATR stops"}, "description": {"fr": "Même déclencheur RSI que le retour à la moyenne, mais des stops dimensionnés à la volatilité (ATR). Peu d'entrées, mêmes filtres.", "en": "Same RSI trigger as mean reversion, but stops sized to volatility (ATR). Few entries, same filters."}},
         {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-risque.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "Le plus petit drawdown du banc (2,3 %) : le risque est tenu — l'edge, lui, reste à démontrer.", "en": "The bench's smallest drawdown (2.3%): risk is held — the edge remains to be shown."}}
       ],
       "texte": {
@@ -274,6 +280,7 @@
         ]
       },
       "items": [
+        {"id": "fig-signal", "type": "figure", "url": "assets/indices/backtesting/figures/signal-avancee.png", "titre": {"fr": "Le signal : régime + momentum", "en": "The signal: regime + momentum"}, "description": {"fr": "La SMA de régime de fond sous le prix et les fills LEAN : le momentum n'entre que dans le sens du régime, avec un stop suiveur à l'ATR.", "en": "The background-regime SMA below the price and the LEAN fills: momentum only enters in the regime's direction, with an ATR trailing stop."}},
         {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-avancee.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "Le gain se construit en juin, la seconde moitié rend une partie : +9,7 % puis −3,1 %.", "en": "The gain is built in June, the second half gives part of it back: +9.7% then −3.1%."}}
       ],
       "texte": {
@@ -308,6 +315,7 @@
         ]
       },
       "items": [
+        {"id": "fig-signal", "type": "figure", "url": "assets/indices/backtesting/figures/signal-vp.png", "titre": {"fr": "Le signal : volume profile par session", "en": "The signal: per-session volume profile"}, "description": {"fr": "Le POC et la zone de valeur (VAH/VAL) recalculés par session, et les fills LEAN autour de ces niveaux.", "en": "The POC and value area (VAH/VAL) recomputed per session, and the LEAN fills around those levels."}},
         {"id": "fig-equite", "type": "figure", "url": "assets/indices/backtesting/figures/equite-vp.png", "titre": {"fr": "La courbe d'équité", "en": "The equity curve"}, "description": {"fr": "216 ordres pour finir à l'équilibre : la cassure de value area à la minute achète les faux breakouts, sur NQ comme sur BTC.", "en": "216 orders to end at breakeven: minute-level value-area breaks buy the false breakouts, on NQ as on BTC."}}
       ],
       "texte": {
