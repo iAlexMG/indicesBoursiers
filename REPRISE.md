@@ -1,3 +1,20 @@
+> **MAJ 2026-07-22 (session AUTOMATISATION — chaîne live PROUVÉE sur Apex ; l'affichage n'a
+> pas bougé)** : suite du chantier hybrides, tout poussé jusqu'à `af8017f`. **Jalon majeur :
+> la chaîne d'exécution live est PROUVÉE en réel sur Apex** — Test 1 (le pop-up de
+> confirmation s'affiche et le clic déclenche l'action) puis **Test 2 (H1 en CONFIRMATION,
+> MNQ ×1, compte Apex → vrai ordre market + bracket SL/TP attaché correctement)**. Depuis le
+> 07-20 : refonte « déclencheur commun » (les 3 partagent le croisement SMA 9/21 en 1 m —
+> H1 SMA Bracket / H2 SMA Suiveur / H3 SMA Annulation), mode 24 h par défaut, **3 visuels
+> peints en OnPaintChart** (validés à l'œil), **3 modes** SHADOW (défaut) / CONFIRMATION
+> (l'humain initie chaque position ; suiveur + flat = auto) / AUTO (**refusé en dur hors
+> Trading Simulator** — un bot sur Apex est interdit). Règles Apex tranchées (mémoire
+> `apex-regles-automatisation`) : CONFIRMATION conforme / AUTO du mauvais côté / SHADOW hors
+> portée. **RESTE** : la **phase 4** (parité shadow ↔ backtest) — outil `parite_shadow.py`
+> bâti mais BLOQUÉ sur données (CSV + base de barres s'arrêtent au 17 juillet → USER doit
+> lancer l'extracteur « NQ-ES History Bars 1m » sur NQ front, puis régénérer le CSV et
+> rejouer le jumeau) ; incrémental H2/H3 en réel ; question stops au support.
+> **REPRENDRE PAR : `Claude_Code/Prompt_Automatisation_Hybrides.md`** (à jour au 07-22).
+
 > **MAJ 2026-07-20 (session AUTOMATISATION — chantier hybrides, l'affichage ci-dessous n'a
 > pas bougé)** : le chantier des **3 stratégies hybrides** est CODE-COMPLET et POUSSÉ
 > (commits `a9f3af3` jumeaux LEAN volet C · `d06ac26` code live + sonde · `600803a` mode
