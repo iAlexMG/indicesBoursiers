@@ -110,15 +110,28 @@ Résultat (fenêtre 06-01 → 07-10) : refonte 1 m du 2026-07-20 → **9 034 com
 (`H:\IndicesBoursiers\automatisation\journaux\<slug>\<date>.ndjson`) au **jumeau backtest du
 même jour** (`backtesting/backtests/journaux/<slug>/<date>.ndjson`), dans les fenêtres où le
 shadow tournait. C'est la mesure « en réel, décide-t-il comme au backtest ? ».
+
+**Le plus simple — `parite/run_parite.py` (« un bouton »)** enchaîne tout pour une date :
+régénère le CSV, règle la fenêtre de `nq_instrument.py` sur `[cible-amorçage .. cible+2]`,
+rejoue les 3 jumeaux LEAN, **restaure la fenêtre du banc (06-01→07-10) même en cas de plantage**,
+puis compare. On le lance **le LENDEMAIN** de la séance shadow :
+```powershell
+python run_parite.py --date 2026-07-23        # séance shadow du 07-23, lancé le 07-24
+```
+🪤 **LEAN REFUSE de backtester le JOUR COURANT** (`set_end_date` rabattu à hier) → la date
+cible doit être STRICTEMENT dans le passé (le script le vérifie et refuse sinon).
+
+Outil bas niveau, si besoin :
 ```powershell
 python parite_shadow.py --lister <journal.ndjson>           # dump des signaux d'un journal
-python parite_shadow.py --slug sma_bracket_nq --date 2026-07-22
+python parite_shadow.py --slug sma_bracket_nq --date 2026-07-23
 ```
-⚠️ **Prérequis données** : le jumeau du jour n'existe que si le CSV 1 m couvre ce jour. Au
-2026-07-22, CSV + base de barres s'arrêtent au **17 juillet** → il faut d'abord (a) lancer
-l'extracteur `NQ-ES History Bars 1m` dans Quantower, (b) régénérer le CSV (`normalize_ohlcv`),
-(c) rejouer le jumeau sur les jours voulus. Pour un artefact solide : shadow PUR (sans
-confirmation) sur des séances complètes, extracteur qui tourne en parallèle.
+⚠️ **Pour un artefact qui a du sens** : shadow **PUR** (sans confirmation) sur une **séance NY
+complète**, « **Restreindre à la séance NY** RE-COCHÉ » (le jumeau est bridé séance NY — sinon
+les signaux du soir sortent en « shadow seul », un artefact de config et pas une divergence),
+extracteur `NQ-ES History Bars 1m` qui tourne en parallèle. ✅ Chaîne prouvée de bout en bout
+le 2026-07-22 (extracteur → base 07-22 → CSV → 3 jumeaux → parité) ; `run_parite.py` validé
+sur 07-21.
 
 ## Déployer & lancer
 

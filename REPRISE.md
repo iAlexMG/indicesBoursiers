@@ -1,3 +1,15 @@
+> **MAJ 2026-07-22 (suite 2, session AUTOMATISATION — PHASE 4 débloquée ; affichage inchangé)** :
+> l'extracteur `NQ-ES History Bars 1m` a été relancé → base `NQ-2026-09-1m.db` à jour (07-22
+> 21:07 ET). **Toute la chaîne de parité phase 4 est PROUVÉE de bout en bout** (CSV régénéré →
+> 3 jumeaux LEAN rejoués → `parite_shadow.py`), et un script **« un bouton »** l'enchaîne :
+> `automatisation/hybrides/parite/run_parite.py --date <jour>` (régénère, règle+RESTAURE la
+> fenêtre du banc, rejoue, compare ; validé sur 07-21). 🪤 **LEAN refuse de backtester le jour
+> courant** (`set_end_date` rabattu à hier) → cible toujours PASSÉE, lancer le LENDEMAIN.
+> **RESTE (user)** : une séance NY en **SHADOW PUR** (sans confirmation, « Restreindre à la
+> séance NY » RE-COCHÉ pour matcher le jumeau) + extracteur en parallèle → le lendemain,
+> `run_parite.py`. ⚠️ Session NON COMMITTÉE (run_parite.py + MAJ docs, à valider avant push).
+> **REPRENDRE PAR : `Claude_Code/Prompt_Automatisation_Hybrides.md`** (à jour au 07-22 suite 2).
+
 > **MAJ 2026-07-22 (session AUTOMATISATION — chaîne live PROUVÉE sur Apex ; l'affichage n'a
 > pas bougé)** : suite du chantier hybrides, tout poussé jusqu'à `af8017f`. **Jalon majeur :
 > la chaîne d'exécution live est PROUVÉE en réel sur Apex** — Test 1 (le pop-up de

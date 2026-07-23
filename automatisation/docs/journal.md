@@ -1,5 +1,44 @@
 # Journal du projet — décisions datées & mesures clés
 
+## 2026-07-22 (suite 2) — PHASE 4 : données débloquées, CHAÎNE PROUVÉE de bout en bout ; parité en attente d'une séance PASSÉE
+
+User lance l'extracteur `NQ-ES History Bars 1m` sur NQ front. Vérifié : la base
+`NQ-2026-09-1m.db` passe de 166 874 à **171 459 barres**, max = **2026-07-22 21:07 ET**
+(couverture par jour : 07-20/21/22 ≈ 1380 barres chacun). Le trou 17→22 est comblé.
+J'enchaîne alors la chaîne aval, et **elle marche de bout en bout** :
+- **(b)** `normalize_ohlcv.py --bars-db` → `1m.csv` régénéré, 171 459 lignes jusqu'au
+  07-22 21:07 ET (⚠️ aucune régression : le `1m.csv` était DÉJÀ 100 % barres, `buy_volume`
+  vide partout, et il n'existe aucun CSV de ticks `NQ-CME-*` — la fusion est un no-op côté ticks).
+- **(c)** rejeu des 3 jumeaux LEAN (fenêtre temporairement passée à 07-18→07-24 dans
+  `nq_instrument.py`, **remise à 06-01→07-10 ensuite** — le banc du site est intact ;
+  les journaux 06-01→07-10 n'ont pas été touchés, seuls 07-20/07-21 se sont AJOUTÉS).
+- **(d)** `parite_shadow.py --slug sma_bracket_nq --date 2026-07-21` s'exécute proprement.
+
+⛔ **MAIS la parité reste sans chiffre utile, pour DEUX raisons NOUVELLES (mesurées) :**
+1. 🪤 **LEAN REFUSE DE BACKTESTER LE JOUR COURANT.** `set_end_date(2026,7,23)` est
+   **rabattu en dur à `End: 07/21/2026`** (log : `Begin DataStream … Stop: 2026-07-21
+   23:59:59`). On est le 07-22 → LEAN plafonne la fin à **hier (07-21)**. Donc **impossible
+   de rejouer le jumeau du 07-22 avant le 07-23**. Or les signaux shadow substantiels sont
+   du 07-22. (Le plafond vient de LEAN, PAS de la fenêtre ni du CSV — le CSV a bien ses
+   361 barres NY-session du 07-22.)
+2. Le seul shadow sur un jour PASSÉ (07-21, bracket) est un test de **13 secondes**
+   (20:56:54→20:57:07 UTC, le soir), **0 croisement** → parité « 0 vs 0 dans la fenêtre »,
+   à vide. Le jumeau, lui, a 18 signaux le 07-21 (séance NY) — hors de la fenêtre shadow.
+
+**CONCLUSION : le blocage DONNÉES est levé et toute la chaîne est prouvée. Il reste UNE
+condition pour un vrai chiffre de parité : un shadow SUBSTANTIEL sur une SÉANCE COMPLÈTE,
+un jour DÉJÀ PASSÉ, et en config qui MATCHE le jumeau.**
+- 🎯 **Prochaine action user** : laisser tourner les 3 hybrides en **SHADOW pur** (aucune
+  confirmation) sur une **séance NY complète**, avec « **Restreindre à la séance NY**
+  RE-COCHÉ » (le jumeau est bridé séance NY 09:30-15:30 ET — matcher des deux côtés, sinon
+  faux écart). Extracteur en parallèle.
+- **Le lendemain**, une seule commande : **`hybrides/parite/run_parite.py --date <jour>`**
+  (écrit ce soir, choix user « oui pour le script »). Il enchaîne (b)(c)(d), règle la fenêtre
+  `nq_instrument.py` puis la **restaure à l'identique en `finally`** (banc intact même si LEAN
+  plante), et **refuse une date ≥ aujourd'hui** (le plafond LEAN). ✅ Validé de bout en bout
+  sur `--date 2026-07-21` (CSV régénéré, LEAN clampé à 07-21, fenêtre restaurée à 06-01→07-10,
+  parité lancée). Non committé (habitude user : valider avant push).
+
 ## 2026-07-22 (suite) — Garde-fou AUTO + outil de parité PHASE 4 (bloquée sur données)
 
 User dit GO à 3 choses (garde-fou AUTO / incrémental H2-H3 en réel / phase 4).
