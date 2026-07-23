@@ -28,7 +28,7 @@ ENTREE_FIN = 15 * 60 + 30      # 15:30 ET — plus rien de neuf après
 FLAT_FORCE = 16 * 60 + 55      # 16:55 ET — tout annuler + liquider, quoi qu'il arrive
 PERTES_MAX = 0                 # 0 = garde-fou DÉSACTIVÉ (refonte 07-20 : ne pas brider les
                                # signaux en phase de test) ; 2 pour tester ce mécanisme
-COOLDOWN_MIN = 2               # court : refonte 07-20 (on veut de la fréquence)
+COOLDOWN_MIN = 0               # recadrage 07-23 : 0 = ré-entrée dès la barre suivante (fréquence max)
 
 
 def heure_ny(t_utc):

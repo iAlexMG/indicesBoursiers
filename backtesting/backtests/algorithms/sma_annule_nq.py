@@ -1,10 +1,10 @@
-# H3 — Croisement SMA 9/21 (1 m) + bracket + annulation — JUMEAU BACKTEST de l'hybride H3
+# H3 — Croisement SMA 2/6 (1 m) + bracket + annulation — JUMEAU BACKTEST de l'hybride H3
 # (refonte 2026-07-20 ; specs : automatisation/docs/strategies-hybrides.md). Remplace
 # rsi_bracket_nq.py. Déclencheur COMMUN aux 3 hybrides (croisement SMA 1 m) ; H3 = H1 mais
 # elle SORT AUSSI au croisement inverse en annulant le bracket — c'est l'ANNULATION qu'elle
 # prouve. Jumeau du code live : automatisation/hybrides/SmaAnnuleHybride.cs (mêmes formules).
-#   - Signal : croisement SMA 9/21 sur closes 1 m. Croisement -> market ×1 + bracket
-#     SL 1,5×ATR14(1 m) / TP 2R (large : le croisement inverse tombe souvent avant).
+#   - Signal : croisement SMA 2/6 sur closes 1 m. Croisement -> market ×1 + bracket
+#     SL 1,0×ATR14(1 m) / TP 2R (large : le croisement inverse tombe souvent avant).
 #   - Sortie anticipée : croisement inverse -> annulation du bracket + market.
 #   - Sorties : TP, SL, croisement inverse, flat forcé 16:55 ET.
 from AlgorithmImports import *
@@ -13,10 +13,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from nq_instrument import setup_nq, viser, CAPITAL
 from cadre_hybride import CadreSeance, Journal, heure_ny, ENTREE_DEBUT, ENTREE_FIN, FLAT_FORCE, PERTES_MAX
 
-SMA_RAPIDE = 9
-SMA_LENTE = 21
-PERIODE_ATR = 14
-STOP_MULT = 1.5           # SL = entrée ∓ 1,5 × ATR (= R)
+SMA_RAPIDE = 2
+SMA_LENTE = 6
+PERIODE_ATR = 7
+STOP_MULT = 1.0           # SL = entrée ∓ 1,0 × ATR (= R)
 TP_R = 2.0               # TP = entrée ± 2 R (large : l'annulation tombe souvent avant)
 CONTRATS = 1
 

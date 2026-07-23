@@ -92,7 +92,7 @@ public abstract class HybrideStrategyBase : Strategy
     public int PertesMax = 0;      // 0 en phase de test : ne pas brider les signaux
 
     [InputParameter("Cooldown après sortie (minutes)", 8, 0, 120, 1, 0)]
-    public int CooldownMin = 2;    // court : on veut de la fréquence, plus l'anti-frais
+    public int CooldownMin = 0;    // recadrage 07-23 : 0 = ré-entrée dès la barre suivante (fréquence max)
 
     [InputParameter("Seed d'historique (heures de barres 1 m)", 9, 2, 168, 1, 0)]
     public int SeedHeures = 48;

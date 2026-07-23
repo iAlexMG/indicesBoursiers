@@ -3,15 +3,15 @@ using TradingPlatform.BusinessLayer;
 namespace Hybrides;
 
 /// <summary>
-/// H3 — Croisement SMA 9/21 (1 m) + bracket + annulation · mécanique : sortie sur signal ·
+/// H3 — Croisement SMA 2/6 (1 m) + bracket + annulation · mécanique : sortie sur signal ·
 /// PROUVE : l'ANNULATION du bracket (fermeture au croisement inverse, AVANT SL/TP).
 /// Refonte 2026-07-20 : même déclencheur COMMUN que H1/H2 (croisement SMA 1 m). H3 = H1
 /// (bracket) MAIS elle sort aussi au croisement inverse en annulant le bracket encore
 /// ouvert — c'est la seule différence, et c'est ce mécanisme qu'elle prouve.
 /// Jumeau LEAN : backtesting/backtests/algorithms/sma_annule_nq.py.
-///   - Signal : croisement SMA 9/21 sur closes 1 m (seedé). Croisement → market ×1 +
+///   - Signal : croisement SMA 2/6 sur closes 1 m (seedé). Croisement → market ×1 +
 ///     bracket SL/TP complet.
-///   - SL = 1,5 × ATR14 (1 m) | TP = 2R (large : le croisement inverse tombe souvent avant,
+///   - SL = 1,0 × ATR14 (1 m) | TP = 2R (large : le croisement inverse tombe souvent avant,
 ///     ce qui exerce l'annulation).
 ///   - Sortie anticipée : croisement inverse → ANNULATION du bracket + market.
 ///   - Sorties : TP, SL (plateforme), croisement inverse, flat.
@@ -19,16 +19,16 @@ namespace Hybrides;
 public sealed class SmaAnnuleHybride : HybrideStrategyBase
 {
     [InputParameter("SMA rapide (barres 1 m)", 20, 2, 100, 1, 0)]
-    public int SmaRapide = 9;
+    public int SmaRapide = 2;
 
     [InputParameter("SMA lente (barres 1 m)", 21, 3, 200, 1, 0)]
-    public int SmaLente = 21;
+    public int SmaLente = 6;
 
     [InputParameter("Période ATR (barres 1 m)", 22, 2, 100, 1, 0)]
-    public int AtrPeriode = 14;
+    public int AtrPeriode = 7;
 
     [InputParameter("Stop (× ATR)", 23, 0.5, 10, 0.5, 1)]
-    public double StopMult = 1.5;
+    public double StopMult = 1.0;
 
     [InputParameter("Take profit (× R)", 24, 0.5, 10, 0.5, 1)]
     public double TpR = 2.0;
@@ -39,7 +39,7 @@ public sealed class SmaAnnuleHybride : HybrideStrategyBase
     public SmaAnnuleHybride()
     {
         Name = "Hybride H3 SMA Annulation (NQ)";
-        Description = "Croisement SMA 9/21 (1 m), bracket + annulation au croisement inverse — jumeau LEAN : sma_annule_nq.py";
+        Description = "Croisement SMA 2/6 (1 m), bracket + annulation au croisement inverse — jumeau LEAN : sma_annule_nq.py";
     }
 
     protected override string Slug => "sma_annule_nq";

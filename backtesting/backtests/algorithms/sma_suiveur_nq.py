@@ -1,8 +1,8 @@
-# H2 — Croisement SMA 9/21 (1 m) + stop suiveur — JUMEAU BACKTEST de l'hybride H2 (refonte
+# H2 — Croisement SMA 2/6 (1 m) + stop suiveur — JUMEAU BACKTEST de l'hybride H2 (refonte
 # 2026-07-20 ; specs : automatisation/docs/strategies-hybrides.md). Déclencheur COMMUN aux 3
 # hybrides (croisement SMA 1 m) ; H2 = la MODIFICATION (stop suiveur remonté plusieurs fois).
 # Jumeau du code live : automatisation/hybrides/SmaSuiveurHybride.cs (mêmes formules).
-#   - Signal : croisement SMA 9/21 sur closes 1 m. Croisement -> market ×1 + SL 2×ATR14(1 m),
+#   - Signal : croisement SMA 2/6 sur closes 1 m. Croisement -> market ×1 + SL 2×ATR14(1 m),
 #     pas de TP.
 #   - Suiveur : à chaque barre 1 m, stop = extrême favorable ∓ 2×ATR, ne recule jamais.
 #   - Sorties : stop, croisement inverse (annulation + market), flat forcé 16:55 ET.
@@ -12,9 +12,9 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from nq_instrument import setup_nq, viser, CAPITAL
 from cadre_hybride import CadreSeance, Journal, heure_ny, ENTREE_DEBUT, ENTREE_FIN, FLAT_FORCE, PERTES_MAX
 
-SMA_RAPIDE = 9
-SMA_LENTE = 21
-PERIODE_ATR = 14
+SMA_RAPIDE = 2
+SMA_LENTE = 6
+PERIODE_ATR = 7
 STOP_MULT = 2.0           # stop / suiveur = extrême favorable ∓ 2 × ATR
 CONTRATS = 1
 

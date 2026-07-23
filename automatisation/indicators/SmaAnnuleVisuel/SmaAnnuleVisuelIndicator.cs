@@ -22,16 +22,16 @@ namespace SmaAnnuleVisuel;
 public sealed class SmaAnnuleVisuelIndicator : Indicator
 {
     [InputParameter("SMA rapide (1 m)", 0, 2, 100, 1, 0)]
-    public int SmaRapide = 9;
+    public int SmaRapide = 2;
 
     [InputParameter("SMA lente (1 m)", 1, 3, 200, 1, 0)]
-    public int SmaLente = 21;
+    public int SmaLente = 6;
 
     [InputParameter("Période ATR (1 m)", 2, 2, 100, 1, 0)]
-    public int AtrPeriode = 14;
+    public int AtrPeriode = 7;
 
     [InputParameter("Stop (× ATR)", 3, 0.5, 10, 0.5, 1)]
-    public double StopMult = 1.5;
+    public double StopMult = 1.0;
 
     [InputParameter("Take profit (× R)", 4, 0.5, 10, 0.5, 1)]
     public double TpR = 2.0;
@@ -46,7 +46,7 @@ public sealed class SmaAnnuleVisuelIndicator : Indicator
     public string HeureFlatEt = "16:55";
 
     [InputParameter("Cooldown après sortie (minutes)", 8, 0, 120, 1, 0)]
-    public int CooldownMin = 2;
+    public int CooldownMin = 0;
 
     [InputParameter("Restreindre à la séance NY (décoché = 24 h)", 9)]
     public bool SeanceNY = false;
@@ -117,10 +117,10 @@ public sealed class SmaAnnuleVisuelIndicator : Indicator
     public SmaAnnuleVisuelIndicator()
     {
         Name = "Hybride H3 SMA Annulation (visuel)";
-        Description = "Croisement SMA 9/21 (1 m), bracket + annulation au croisement inverse — visuel de H3 (graphe NQ 1 m)";
+        Description = "Croisement SMA 2/6 (1 m), bracket + annulation au croisement inverse — visuel de H3 (graphe NQ 1 m)";
         SeparateWindow = false;
-        AddLineSeries("SMA rapide (9)", Color.DodgerBlue, 2, LineStyle.Solid);
-        AddLineSeries("SMA lente (21)", Color.Orange, 2, LineStyle.Solid);
+        AddLineSeries("SMA rapide (2)", Color.DodgerBlue, 2, LineStyle.Solid);
+        AddLineSeries("SMA lente (6)", Color.Orange, 2, LineStyle.Solid);
     }
 
     protected override void OnInit()

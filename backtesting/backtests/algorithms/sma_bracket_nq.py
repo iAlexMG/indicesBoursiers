@@ -1,9 +1,9 @@
-# H1 — Croisement SMA 9/21 (1 m) + bracket — JUMEAU BACKTEST de l'hybride H1 (refonte
+# H1 — Croisement SMA 2/6 (1 m) + bracket — JUMEAU BACKTEST de l'hybride H1 (refonte
 # 2026-07-20 ; specs : automatisation/docs/strategies-hybrides.md). Remplace orb_nq.py.
 # Déclencheur COMMUN aux 3 hybrides (croisement SMA 1 m) ; H1 = le bracket, résolu par SL/TP.
 # Jumeau du code live : automatisation/hybrides/SmaBracketHybride.cs (mêmes formules).
-#   - Signal : croisement SMA 9/21 sur closes 1 m.
-#   - Entrée : croisement -> market ×1 + bracket SL 1,5×ATR14(1 m) / TP 1R (simulé, boucle 1 m).
+#   - Signal : croisement SMA 2/6 sur closes 1 m.
+#   - Entrée : croisement -> market ×1 + bracket SL 1,0×ATR14(1 m) / TP 1R (simulé, boucle 1 m).
 #   - Sorties : TP, SL, ou flat forcé 16:55 ET. Ignore les croisements suivants tant qu'en
 #     position (le bracket referme seul — c'est ce que H1 prouve).
 from AlgorithmImports import *
@@ -12,10 +12,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from nq_instrument import setup_nq, viser, CAPITAL
 from cadre_hybride import CadreSeance, Journal, heure_ny, ENTREE_DEBUT, ENTREE_FIN, FLAT_FORCE, PERTES_MAX
 
-SMA_RAPIDE = 9
-SMA_LENTE = 21
-PERIODE_ATR = 14
-STOP_MULT = 1.5           # SL = entrée ∓ 1,5 × ATR (= R)
+SMA_RAPIDE = 2
+SMA_LENTE = 6
+PERIODE_ATR = 7
+STOP_MULT = 1.0           # SL = entrée ∓ 1,0 × ATR (= R)
 TP_R = 1.0               # TP = entrée ± 1 R
 CONTRATS = 1
 
