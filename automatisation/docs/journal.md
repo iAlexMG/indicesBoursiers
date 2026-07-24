@@ -1,5 +1,36 @@
 # Journal du projet — décisions datées & mesures clés
 
+## 2026-07-24 — Trailing H2 + annulation H3 PROUVÉS sur le vrai ordre Apex ; 3 bugs de la base corrigés
+
+Session de captures. Le user tourne H2 puis H3 en CONFIRMATION sur **MNQU6**. Trois bugs de
+`hybrides/HybrideStrategyBase.cs` empêchaient le suiveur/l'annulation sur un vrai ordre — tous
+corrigés, DLL recompilée net10.0 + redéployée (`deploy.ps1`), **validés sur les journaux Rithmic
+réels** (dernière session isolée par le dernier `demarrage`, script jetable `valider-journaux.ps1`).
+
+1. **Mismatch symbole (le gros)** — la stratégie tournait sur le continu `MNQ` mais Rithmic
+   exécute sur le contrat `MNQU6` (`Symbol.Id` différent). `EstNotreSymbole` (égalité stricte)
+   rejetait la position ET les trades → `SurPositionOuverte` jamais appelé → `_extreme` NaN →
+   suiveur mort, rien journalisé après `entree_envoyee`. ⇒ **Le « constat 07-22 » (la trace
+   s'arrête à l'entrée) n'était PAS une limite Rithmic, c'était ce bug.** Règle : tourner la
+   stratégie sur le CONTRAT, jamais le continu.
+2. **PositionId non renseigné (Rithmic)** — `ResoudreOrdresLies` exigeait `o.PositionId == p.Id`,
+   jamais résolu → « Stop introuvable pour modification » et annulation H3 impossible (SL/TP
+   orphelins). Fix : résoudre le SL/TP par **compte + symbole + côté de sortie + type protecteur
+   + ordre vivant** ; `PositionId` exigé seulement s'il est présent.
+3. **PositionAdded ré-émis (~5 s)** → `SurPositionAjoutee` réinitialisait `_extreme` et spammait
+   `bracket_pose`. Fix : **idempotence** (ignorer si `PositionCourante.Id == p.Id`, juste retenter
+   la résolution du bracket).
+
+**Mesures (journaux réels, session post-fix)** :
+- H2, un long : stop suiveur `28548.75 → … → 28576.75` (**8 crans, une modif/barre**), passe
+  l'entrée (28563.5) = profit verrouillé ; puis sortie au croisement inverse.
+- H3 : bracket **SL 55 / TP 110 ticks** posé UNE fois ; `annulation` du bracket au croisement inverse.
+- Idempotence : `bracket_pose` 1:1 (avant : 53 pour 3 entrées, rafale de 48).
+
+Effet de bord : le terminal NDJSON montre désormais TOUTE la chaîne sur le compte réel →
+`protocole-captures-apex.md` mis à jour (consigne « fill via Ordres seulement » périmée + règle
+du CONTRAT ajoutée). Fix + docs **NON COMMITTÉS** au moment de l'écriture.
+
 ## 2026-07-22 (suite 2) — PHASE 4 : données débloquées, CHAÎNE PROUVÉE de bout en bout ; parité en attente d'une séance PASSÉE
 
 User lance l'extracteur `NQ-ES History Bars 1m` sur NQ front. Vérifié : la base

@@ -72,7 +72,14 @@ Write-Host ('  ' + ('-' * 84)) -ForegroundColor DarkGray
 
 function Masquer($txt) {
     if (-not $txt) { return $txt }
-    return [regex]::Replace($txt, 'APEX-\d+\s*\([^)]*\)', 'APEX-**** (compte masqué)')
+    # Politique « zéro Apex » : on n'affiche NI le numéro, NI le nom légal, NI le mot « Apex ».
+    #   1) compte complet « APEX-1234567 (Nom Legal) »  ->  « (compte masqué) »
+    #   2) numéro nu résiduel « APEX-1234567 »          ->  « (compte masqué) »
+    #   3) filet de sécurité : le mot « Apex/APEX » seul ->  « (compte masqué) »
+    $t = [regex]::Replace($txt, 'APEX-\d+\s*\([^)]*\)', '(compte masqué)')
+    $t = [regex]::Replace($t,   'APEX-\d+',             '(compte masqué)')
+    $t = [regex]::Replace($t,   '(?i)\bapex\b',         '(compte masqué)')
+    return $t
 }
 
 function Fmt($v) {

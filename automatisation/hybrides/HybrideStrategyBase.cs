@@ -784,6 +784,16 @@ public abstract class HybrideStrategyBase : Strategy
         if (!EstANous(p.Account) || !EstNotreSymbole(p.Symbol)) return;
         lock (Verrou)
         {
+            // Rithmic ré-émet PositionAdded en boucle pour la MÊME position (constaté 2026-07-24 :
+            // « bracket_pose » se répétait toutes les ~5 s). On ne traite l'ouverture qu'UNE fois :
+            // sinon SurPositionOuverte réinitialise l'extrême favorable du suiveur (H2) à chaque
+            // re-émission → le stop ne monte jamais. Aux re-émissions, on se contente de RETENTER
+            // la résolution du bracket, qui peut n'apparaître qu'après le fill.
+            if (PositionCourante is not null && PositionCourante.Id == p.Id)
+            {
+                ResoudreOrdresLies();
+                return;
+            }
             PositionCourante = p;
             PrixEntree = p.OpenPrice;
             SensPosition = p.Side;
@@ -865,9 +875,18 @@ public abstract class HybrideStrategyBase : Strategy
     {
         var p = PositionCourante;
         if (p is null || (_idOrdreSl is not null && _idOrdreTp is not null)) return;
+        // Un SL/TP FERME la position → il porte le CÔTÉ OPPOSÉ (SL d'un long = Sell Stop).
+        Side sortie = p.Side == Side.Buy ? Side.Sell : Side.Buy;
         foreach (var o in Core.Instance.Orders)
         {
-            if (o.PositionId != p.Id || !EstANous(o.Account)) continue;
+            if (!EstANous(o.Account) || !EstNotreSymbole(o.Symbol)) continue;
+            // ⚠ Rithmic ne renseigne PAS le PositionId des ordres attachés (constaté 2026-07-24 :
+            // « Stop introuvable pour modification » alors que le SL existait). On n'exige donc le
+            // lien QUE s'il est présent ; sinon on retombe sur compte + symbole + côté de sortie +
+            // type protecteur + ordre encore vivant.
+            if (!string.IsNullOrEmpty(o.PositionId) && o.PositionId != p.Id) continue;
+            if (o.Side != sortie) continue;
+            if (o.Status is OrderStatus.Cancelled or OrderStatus.Filled or OrderStatus.Refused) continue;
             var comportement = o.OrderType?.Behavior;
             if (comportement is OrderTypeBehavior.Stop or OrderTypeBehavior.StopLimit or OrderTypeBehavior.TrailingStop)
                 _idOrdreSl ??= o.Id;

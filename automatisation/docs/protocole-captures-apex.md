@@ -16,9 +16,14 @@ triptyque, montage de la boucle vidéo, puis intégration au site (`site-content
 - **Terminal NDJSON visible** dans le cadre, via `suivre-journal.ps1` (lecture lisible).
 - **Vidéo = boucle muette ~30–60 s**, autoplay/muted/loop ; le fil 1→6 en surimpression
   (ajouté au montage) sert de narration.
-- **Fill + bracket réels montrés via le panneau Ordres/DOM de Quantower**, PAS via le
-  journal : sur le compte réel, les événements de position ne sont pas journalisés
-  (constat du 07-22, voir Pièges). Le terminal ne porte donc que la chaîne de *décision*.
+- **Tourner la stratégie sur le CONTRAT (`MNQU6`…), JAMAIS le continu (`MNQ`).** Rithmic
+  exécute sur le contrat ; si la stratégie tourne sur le continu, elle ne reconnaît pas sa
+  position (`Symbol.Id` différent) → ni suiveur, ni annulation, ni journalisation après
+  l'entrée. (Bug corrigé le 07-24 ; c'était la vraie cause du « constat 07-22 » ci-dessous.)
+- **Le terminal montre DÉSORMAIS toute la chaîne sur le compte réel** — fill, `bracket_pose`,
+  `stop_modifie` (escalier), `annulation`, sortie (fix 07-24). Le panneau Ordres/DOM reste la
+  **preuve plateforme** du fill et du bracket (à filmer aussi), mais le journal n'est plus
+  limité à la seule chaîne de décision. ⚠️ Ne vaut que sur le CONTRAT (voir point ci-dessus).
 - Le moment filmé = **mode CONFIRMATION** (pop-up → clic → vrai ordre + bracket).
 
 ## 1. Le cockpit — disposition 1080p
@@ -27,7 +32,7 @@ Quatre zones + le pop-up flottant. Le fil numéroté 1→6 est l'ordre de lectur
 
 - **Graphique NQ 1 m** — gauche, ~64 % de large, pleine hauteur sauf le bandeau du bas.
   Charge la stratégie **et** son indicateur visuel jumeau (`Hybride H2 SMA Suiveur (visuel)`,
-  etc.) : SMA 9 (bleue) / 21 (ambre), escalier ambre du stop suiveur, bande rouge→verte
+  etc.) : SMA 2 (bleue) / 6 (ambre), escalier ambre du stop suiveur, bande rouge→verte
   risque/profit, triangle d'entrée, point de sortie, étiquette `+pts (R)`, panneau résultats
   haut-droite — **plus** les lignes d'ordre réelles (fill + SL + TP) tracées par Quantower.
 - **Colonne droite ~36 %**, coupée en deux :
@@ -46,11 +51,13 @@ Le fil : **1** signal (croisement) → **2** proposition (pop-up) → **3** jour
   taille de l'indicateur visuel). Le texte doit survivre à la réduction à ~1200 px de large.
 - **Capture en 1920×1080 natif** — jamais une fenêtre réduite puis agrandie.
 - **Déclutter** : ferme watchlists, chat, panneaux hors-sujet ; réduis les barres d'outils.
-- **Masquage du compte, DEUX endroits** :
-  1. l'en-tête Quantower (garder « Apex Legacy 250k » lisible, cacher le numéro) ;
+- **Masquage du compte — politique « zéro Apex » (décision 2026-07-23) : rien à l'écran ne
+  doit identifier le prop firm — ni le numéro, ni le nom légal, NI le mot « Apex »** :
+  1. l'en-tête Quantower + le panneau Positions/Ordres : replier la colonne « Account » et
+     masquer le nom de la connexion (ou je le floute en post) ;
   2. le NDJSON lui-même — la ligne `demarrage` contient le numéro **et le nom légal**.
-     `suivre-journal.ps1` le masque tout seul (`APEX-**** (compte masqué)`). Si tu tail le
-     JSON brut à la place, c'est à toi de le gérer.
+     `suivre-journal.ps1` les masque tout seul → rendu `(compte masqué)`, **plus aucun
+     « Apex »**. Si tu tail le JSON brut à la place, c'est à toi de le gérer.
 - **Palette = celle du code** (rien à réinventer) : SMA 9 bleue, SMA 21 + stop ambre, entrée
   verte, sortie rouge, TP bleu. Réutilisée dans l'annotation → l'œil relie image et légende.
 
@@ -70,7 +77,7 @@ quel → c'est le **même format que le jumeau LEAN**, donc la preuve de parité
 Rendu (extrait réel, séance CONFIRMATION du 07-22) :
 
 ```
-  18:07:08  DÉMARRAGE     CONFIRMATION @ APEX-**** (compte masqué) (General) — 24 h ...
+  18:07:08  DÉMARRAGE     CONFIRMATION @ (compte masqué) (General) — 24 h ...
   18:21:00  SIGNAL       @29090.25 croisement haussier -> long   [ sma 29085.42/29082.46  atr 12.57 ]
   18:21:00  PROPOSITION  @29090.25 Hybride H1 SMA Bracket (NQ) : ENTRÉE LONG ? — market ×1 ... + SL 75 / TP 75 ticks
   18:21:02  OK ACCEPTÉE   ACCEPTÉE par l'utilisateur (clic)
@@ -129,9 +136,13 @@ dans `Portfolio/indicesBoursiers/automatisation/site-content/` → `sync-site.py
   `suivre-journal.ps1` masque ; le tail brut ne masque pas.
 - **Encodage** : PowerShell 5.1 lit un `.ndjson` UTF-8 en CP1252 → accents cassés à l'écran.
   Toujours `-Encoding UTF8` (le suiveur le force).
-- **Fill/bracket réels non journalisés** (constat 07-22 : la trace réelle s'arrête à
-  `entree_envoyee`). Ne PAS compter sur le terminal pour montrer le fill sur le compte réel
-  — le montrer via le panneau Ordres. (En SHADOW, à l'inverse, le journal est complet.)
+- **Tourner sur le CONTRAT, pas le continu** (`MNQU6` pas `MNQ`) : sinon la stratégie ne
+  reconnaît pas sa position → pas de suiveur/annulation et rien de journalisé après l'entrée.
+  ⚠️ Le contrat front change au roll (U6 = sept. 2026) — vérifier le mois en cours.
+- **[CORRIGÉ le 07-24] La chaîne EST journalisée sur le compte réel.** Le « constat 07-22 »
+  (la trace s'arrêtait à `entree_envoyee`) venait du bug ci-dessus, pas d'une limite Rithmic :
+  sur le CONTRAT, le terminal montre fill, `bracket_pose`, `stop_modifie` (escalier) et
+  `annulation`. Le panneau Ordres reste la preuve plateforme, mais n'est plus la seule source.
 - **`.ps1` avec BOM UTF-8** (piège PS 5.1 : un `—` dans une chaîne casse le parse sinon).
 - **Stop suiveur = H2 seulement** ; le pop-up d'entrée = les trois ; l'annulation au
   croisement inverse = H3.
