@@ -7,57 +7,54 @@ using Hybrides;
 namespace SmaBracketVisuel;
 
 /// <summary>
-/// Hybride H1 SMA Bracket — le VISUEL sur le graphique (graphe NQ 1 m). Rejoue la logique
-/// EXACTE de la stratégie `Hybride H1 SMA Bracket (NQ)` et du jumeau `sma_bracket_nq.py`
-/// (mêmes classes d'indicateurs — Compile Include de hybrides/Indicateurs.cs).
+/// Hybride H1 SMA Bracket — le VISUEL sur le graphique (graphe NQ 1 m).
 ///
-/// Rendu (2026-07-22) : deux SMA (rapide 2 = bleue, lente 6 = orange) en line series ; le
-/// reste peint en `OnPaintChart`. Pour CHAQUE trade :
-///   - encadré **vert** (entrée → TP) et **rouge** (entrée → SL), de l'entrée à la sortie ;
-///     à la clôture, la zone ATTEINTE est mise en évidence (forte opacité) et l'autre estompée ;
-///   - **lignes pointillées** SL (rouge) et TP (vert) aux niveaux, + fine ligne d'entrée ;
-///   - flèche d'entrée (triangle) et **point de sortie posé EXACTEMENT sur le niveau touché** ;
-///   - **étiquette de résultat** du trade (points + R) près de la sortie.
-/// Plus un **panneau de résultats** (haut-droite) : trades, TP/SL, taux, cumul (points, R).
-/// Décisions AUX CLÔTURES de barres. N'émet rien (ni ordre, ni pop-up, ni journal).
+/// DEUX sources (paramètre « Source ») : Simulation (auto — un trade à chaque croisement) ou
+/// Réel (lit le journal NDJSON du jour via <see cref="LecteurJournalTrades"/> — ne dessine QUE
+/// tes trades confirmés). Rendu : zones vert (entrée→TP) / rouge (entrée→SL), lignes pointillées
+/// SL/TP, flèche d'entrée, point de sortie (TP vert / SL rouge / flat orange), étiquette, panneau.
+/// Couleurs / épaisseurs / opacité / visibilité paramétrables. Décisions aux clôtures. N'émet rien.
 /// </summary>
 public sealed class SmaBracketVisuelIndicator : Indicator
 {
-    [InputParameter("SMA rapide (1 m)", 0, 2, 100, 1, 0)]
-    public int SmaRapide = 2;
+    [InputParameter("SMA rapide (1 m)", 0, 2, 100, 1, 0)] public int SmaRapide = 2;
+    [InputParameter("SMA lente (1 m)", 1, 3, 200, 1, 0)] public int SmaLente = 6;
+    [InputParameter("Période ATR (1 m)", 2, 2, 100, 1, 0)] public int AtrPeriode = 7;
+    [InputParameter("Stop (× ATR)", 3, 0.5, 10, 0.5, 1)] public double StopMult = 1.0;
+    [InputParameter("Take profit (× R)", 4, 0.5, 10, 0.5, 1)] public double TpR = 1.0;
+    [InputParameter("Entrées à partir de (HH:mm ET)", 5)] public string EntreesDebutEt = "09:30";
+    [InputParameter("Entrées jusqu'à (HH:mm ET)", 6)] public string EntreesFinEt = "15:30";
+    [InputParameter("Flat forcé à (HH:mm ET)", 7)] public string HeureFlatEt = "16:55";
+    [InputParameter("Cooldown après sortie (minutes)", 8, 0, 120, 1, 0)] public int CooldownMin = 0;
+    [InputParameter("Restreindre à la séance NY (décoché = 24 h)", 9)] public bool SeanceNY = false;
 
-    [InputParameter("SMA lente (1 m)", 1, 3, 200, 1, 0)]
-    public int SmaLente = 6;
+    [InputParameter("Source", 12, variants: new object[]
+        { "Simulation (auto)", ModeSource.Simulation, "Réel (journal confirmé)", ModeSource.Reel })]
+    public ModeSource Source = ModeSource.Simulation;
+    [InputParameter("Dossier des journaux (mode Réel)", 13)]
+    public string DossierJournaux = @"H:\IndicesBoursiers\automatisation\journaux";
 
-    [InputParameter("Période ATR (1 m)", 2, 2, 100, 1, 0)]
-    public int AtrPeriode = 7;
+    [InputParameter("Afficher les SMA", 14)] public bool AfficherSma = true;
+    [InputParameter("Afficher les zones", 15)] public bool AfficherZones = true;
+    [InputParameter("Afficher les lignes SL/TP", 16)] public bool AfficherLignes = true;
+    [InputParameter("Afficher l'entrée (flèche + ligne)", 17)] public bool AfficherEntree = true;
+    [InputParameter("Afficher le point de sortie", 18)] public bool AfficherSortie = true;
+    [InputParameter("Panneau de résultats", 10)] public bool AfficherPanneau = true;
+    [InputParameter("Étiquette de résultat par trade", 11)] public bool AfficherEtiquettes = true;
 
-    [InputParameter("Stop (× ATR)", 3, 0.5, 10, 0.5, 1)]
-    public double StopMult = 1.0;
+    [InputParameter("Couleur SMA rapide", 20)] public Color CoulSmaRapide = Color.DodgerBlue;
+    [InputParameter("Couleur SMA lente", 21)] public Color CoulSmaLente = Color.Orange;
+    [InputParameter("Couleur zone/TP (profit)", 22)] public Color CoulProfit = Color.LimeGreen;
+    [InputParameter("Couleur zone/SL (risque)", 23)] public Color CoulRisque = Color.OrangeRed;
+    [InputParameter("Couleur entrée longue", 24)] public Color CoulEntreeLong = Color.LimeGreen;
+    [InputParameter("Couleur entrée courte", 25)] public Color CoulEntreeShort = Color.Red;
 
-    [InputParameter("Take profit (× R)", 4, 0.5, 10, 0.5, 1)]
-    public double TpR = 1.0;
-
-    [InputParameter("Entrées à partir de (HH:mm ET)", 5)]
-    public string EntreesDebutEt = "09:30";
-
-    [InputParameter("Entrées jusqu'à (HH:mm ET)", 6)]
-    public string EntreesFinEt = "15:30";
-
-    [InputParameter("Flat forcé à (HH:mm ET)", 7)]
-    public string HeureFlatEt = "16:55";
-
-    [InputParameter("Cooldown après sortie (minutes)", 8, 0, 120, 1, 0)]
-    public int CooldownMin = 0;
-
-    [InputParameter("Restreindre à la séance NY (décoché = 24 h)", 9)]
-    public bool SeanceNY = false;
-
-    [InputParameter("Panneau de résultats", 10)]
-    public bool AfficherPanneau = true;
-
-    [InputParameter("Étiquette de résultat par trade", 11)]
-    public bool AfficherEtiquettes = true;
+    [InputParameter("Épaisseur des SMA", 30, 1, 6, 1, 0)] public int EpaisseurSma = 2;
+    [InputParameter("Épaisseur lignes SL/TP", 31, 0.5, 6, 0.5, 1)] public double EpaisseurLignes = 1.2;
+    [InputParameter("Style ligne d'entrée", 32, variants: new object[]
+        { "Points", StyleTrait.Points, "Tirets", StyleTrait.Tirets, "Plein", StyleTrait.Plein })]
+    public StyleTrait StyleEntree = StyleTrait.Points;
+    [InputParameter("Opacité des zones (0-255)", 33, 0, 255, 1, 0)] public int OpaciteZones = 34;
 
     private const int LRapide = 0, LLente = 1;
     private const int MaxTrades = 1000;
@@ -65,18 +62,19 @@ public sealed class SmaBracketVisuelIndicator : Indicator
 
     private DeclencheurSmaCross _cross = null!;
     private AtrWilder _atr = null!;
+    private LecteurJournalTrades? _lecteur;
     private int _debut, _fin, _flat;
+    private double _tick = 0.25;
 
     private sealed class Trade
     {
         public DateTime EntreeTemps;
         public double EntreePrix, Sl, Tp;
-        public int Sens;                          // +1 long, -1 short
+        public int Sens;
         public DateTime? SortieTemps;
-        public double SortieNiveau;               // le prix EXACT où le trade s'est fermé
-        public char SortieType;                   // 'T' TP, 'S' SL, 'F' flat
-        public double Pts;                         // résultat en points (signé)
-        public double R;                           // résultat en R (signé)
+        public double SortieNiveau;
+        public char SortieType;                   // 'T' TP, 'S' SL, 'F' flat, 'X' signal
+        public double Pts, R;
     }
 
     private readonly object _lock = new();
@@ -86,24 +84,13 @@ public sealed class SmaBracketVisuelIndicator : Indicator
     private DateTime _dernierTempsBarre = DateTime.MinValue;
     private DateTime _sortieUtc = DateTime.MinValue;
 
-    // GDI+ (créés une fois — patron VpSessionNq).
-    private readonly Brush _vFort = new SolidBrush(Color.FromArgb(90, Color.LimeGreen));
-    private readonly Brush _vNeutre = new SolidBrush(Color.FromArgb(34, Color.LimeGreen));
-    private readonly Brush _vFaible = new SolidBrush(Color.FromArgb(14, Color.LimeGreen));
-    private readonly Brush _rFort = new SolidBrush(Color.FromArgb(90, Color.OrangeRed));
-    private readonly Brush _rNeutre = new SolidBrush(Color.FromArgb(34, Color.OrangeRed));
-    private readonly Brush _rFaible = new SolidBrush(Color.FromArgb(14, Color.OrangeRed));
-    private readonly Pen _lnTp = new(Color.FromArgb(200, Color.LimeGreen), 1.2f) { DashStyle = DashStyle.Dash };
-    private readonly Pen _lnTpFort = new(Color.LimeGreen, 2.2f) { DashStyle = DashStyle.Dash };
-    private readonly Pen _lnSl = new(Color.FromArgb(200, Color.OrangeRed), 1.2f) { DashStyle = DashStyle.Dash };
-    private readonly Pen _lnSlFort = new(Color.OrangeRed, 2.2f) { DashStyle = DashStyle.Dash };
-    private readonly Pen _lnEntree = new(Color.FromArgb(120, Color.Gainsboro), 1f) { DashStyle = DashStyle.Dot };
-    private readonly Brush _dotVert = new SolidBrush(Color.LimeGreen);
-    private readonly Brush _dotRouge = new SolidBrush(Color.Red);
+    // GDI+ reconstruits dans OnInit (dépendent des paramètres).
+    private Brush _vFort = null!, _vNeutre = null!, _vFaible = null!;
+    private Brush _rFort = null!, _rNeutre = null!, _rFaible = null!;
+    private Pen _lnTp = null!, _lnTpFort = null!, _lnSl = null!, _lnSlFort = null!, _lnEntree = null!;
+    private Brush _triLong = null!, _triShort = null!, _dotVert = null!, _dotRouge = null!;
     private readonly Brush _dotOrange = new SolidBrush(Color.Orange);
     private readonly Pen _dotBord = new(Color.FromArgb(230, 20, 24, 30), 1.2f);
-    private readonly Brush _triLong = new SolidBrush(Color.LimeGreen);
-    private readonly Brush _triShort = new SolidBrush(Color.Red);
     private readonly Brush _txtVert = new SolidBrush(Color.FromArgb(240, 190, 255, 190));
     private readonly Brush _txtRouge = new SolidBrush(Color.FromArgb(240, 255, 180, 165));
     private readonly Brush _pillBg = new SolidBrush(Color.FromArgb(195, 14, 18, 24));
@@ -118,10 +105,10 @@ public sealed class SmaBracketVisuelIndicator : Indicator
     public SmaBracketVisuelIndicator()
     {
         Name = "Hybride H1 SMA Bracket (visuel)";
-        Description = "Croisement SMA 2/6 (1 m) + zone de trade (bracket) — visuel de la stratégie H1 (graphe NQ 1 m)";
+        Description = "Croisement SMA 2/6 (1 m) + zone de trade (bracket) — simulation OU journal réel (graphe NQ 1 m)";
         SeparateWindow = false;
-        AddLineSeries("SMA rapide (2)", Color.DodgerBlue, 2, LineStyle.Solid);
-        AddLineSeries("SMA lente (6)", Color.Orange, 2, LineStyle.Solid);
+        AddLineSeries("SMA rapide", Color.DodgerBlue, 2, LineStyle.Solid);
+        AddLineSeries("SMA lente", Color.Orange, 2, LineStyle.Solid);
     }
 
     protected override void OnInit()
@@ -131,18 +118,56 @@ public sealed class SmaBracketVisuelIndicator : Indicator
         _debut = CadreSeance.ParseHeure(EntreesDebutEt);
         _fin = CadreSeance.ParseHeure(EntreesFinEt);
         _flat = CadreSeance.ParseHeure(HeureFlatEt);
+        _tick = this.Symbol?.TickSize is { } ts && ts > 0 ? ts : 0.25;
         _derniereBarreTraitee = DateTime.MinValue;
         _dernierTempsBarre = DateTime.MinValue;
         _sortieUtc = DateTime.MinValue;
         lock (_lock) { _trades.Clear(); _courant = null; }
+        _lecteur = new LecteurJournalTrades(DossierJournaux, "sma_bracket_nq", _tick);
+        ConstruireStyles();
     }
+
+    private void ConstruireStyles()
+    {
+        int op = Math.Clamp(OpaciteZones, 0, 255);
+        int opFort = Math.Min(255, (int)(op * 2.4));
+        int opFaible = Math.Max(0, (int)(op * 0.4));
+        _vFort = new SolidBrush(Color.FromArgb(opFort, CoulProfit));
+        _vNeutre = new SolidBrush(Color.FromArgb(op, CoulProfit));
+        _vFaible = new SolidBrush(Color.FromArgb(opFaible, CoulProfit));
+        _rFort = new SolidBrush(Color.FromArgb(opFort, CoulRisque));
+        _rNeutre = new SolidBrush(Color.FromArgb(op, CoulRisque));
+        _rFaible = new SolidBrush(Color.FromArgb(opFaible, CoulRisque));
+
+        float wl = (float)Math.Max(0.5, EpaisseurLignes);
+        _lnTp = new Pen(Color.FromArgb(200, CoulProfit), wl) { DashStyle = DashStyle.Dash };
+        _lnTpFort = new Pen(CoulProfit, wl + 1f) { DashStyle = DashStyle.Dash };
+        _lnSl = new Pen(Color.FromArgb(200, CoulRisque), wl) { DashStyle = DashStyle.Dash };
+        _lnSlFort = new Pen(CoulRisque, wl + 1f) { DashStyle = DashStyle.Dash };
+        _lnEntree = new Pen(Color.FromArgb(120, Color.Gainsboro), 1f) { DashStyle = Dash(StyleEntree) };
+        _triLong = new SolidBrush(CoulEntreeLong);
+        _triShort = new SolidBrush(CoulEntreeShort);
+        _dotVert = new SolidBrush(CoulProfit);
+        _dotRouge = new SolidBrush(CoulRisque);
+
+        int w = Math.Max(1, EpaisseurSma);
+        LinesSeries[LRapide].Color = AfficherSma ? CoulSmaRapide : Color.Transparent;
+        LinesSeries[LLente].Color = AfficherSma ? CoulSmaLente : Color.Transparent;
+        LinesSeries[LRapide].Width = w;
+        LinesSeries[LLente].Width = w;
+    }
+
+    private static DashStyle Dash(StyleTrait s) => s switch
+    {
+        StyleTrait.Plein => DashStyle.Solid,
+        StyleTrait.Tirets => DashStyle.Dash,
+        _ => DashStyle.Dot,
+    };
 
     protected override void OnUpdate(UpdateArgs args)
     {
-        if (args.Reason == UpdateReason.HistoricalBar)
-            TraiterBarreClose(0);
-        else if (Count > 1)
-            TraiterBarreClose(1);
+        if (args.Reason == UpdateReason.HistoricalBar) TraiterBarreClose(0);
+        else if (Count > 1) TraiterBarreClose(1);
 
         if (_cross.Pret)
         {
@@ -172,7 +197,9 @@ public sealed class SmaBracketVisuelIndicator : Indicator
             SetValue(_cross.Lente, LLente, offset);
         }
 
-        // 1) EN POSITION : bracket simulé (SL prioritaire), puis flat forcé. Ignore les croisements.
+        if (Source == ModeSource.Reel) return;   // trades = journal, pas de simulation
+
+        // 1) EN POSITION : bracket (SL prioritaire), puis flat forcé.
         if (_courant is { } tr)
         {
             if ((tr.Sens > 0 && bas <= tr.Sl) || (tr.Sens < 0 && haut >= tr.Sl))
@@ -182,7 +209,7 @@ public sealed class SmaBracketVisuelIndicator : Indicator
             else if (SeanceNY && m >= _flat)
                 Fermer(ouverture, close, 'F');
         }
-        // 2) ENTRÉE sur croisement (flat + [fenêtre si séance NY] + cooldown + ATR prêt).
+        // 2) ENTRÉE sur croisement.
         else if (_cross.Croisement != 0 && _atr.Pret && CooldownOk(finUtc)
                  && (!SeanceNY || (m > _debut && m <= _fin)))
         {
@@ -190,9 +217,7 @@ public sealed class SmaBracketVisuelIndicator : Indicator
             double r = StopMult * _atr.Valeur;
             var t = new Trade
             {
-                EntreeTemps = ouverture,
-                EntreePrix = close,
-                Sens = sens,
+                EntreeTemps = ouverture, EntreePrix = close, Sens = sens,
                 Sl = sens > 0 ? close - r : close + r,
                 Tp = sens > 0 ? close + TpR * r : close - TpR * r,
             };
@@ -214,9 +239,9 @@ public sealed class SmaBracketVisuelIndicator : Indicator
             t.SortieTemps = temps;
             t.SortieNiveau = niveau;
             t.SortieType = type;
-            t.Pts = (niveau - t.EntreePrix) * t.Sens;                    // points signés
+            t.Pts = (niveau - t.EntreePrix) * t.Sens;
             double risque = Math.Abs(t.EntreePrix - t.Sl);
-            t.R = risque > 0 ? t.Pts / risque : 0;                       // en R (SL = -1, TP = +TpR)
+            t.R = risque > 0 ? t.Pts / risque : 0;
             _courant = null;
         }
         _sortieUtc = temps.AddMinutes(1);
@@ -225,14 +250,33 @@ public sealed class SmaBracketVisuelIndicator : Indicator
     private bool CooldownOk(DateTime finUtc) =>
         _sortieUtc == DateTime.MinValue || (finUtc - _sortieUtc).TotalMinutes >= CooldownMin;
 
+    private Trade[] TradesReels()
+    {
+        var reels = _lecteur?.Trades(DateTime.UtcNow) ?? Array.Empty<LecteurJournalTrades.TradeReel>();
+        var list = new List<Trade>(reels.Length);
+        foreach (var r in reels)
+        {
+            double sl = double.IsNaN(r.StopInitial) ? r.Sl : r.StopInitial;
+            list.Add(new Trade
+            {
+                EntreeTemps = r.EntreeTemps, EntreePrix = r.EntreePrix, Sens = r.Sens,
+                Sl = sl, Tp = r.Tp,
+                SortieTemps = r.SortieTemps, SortieNiveau = r.SortieNiveau,
+                SortieType = r.SortieType, Pts = r.Pts, R = r.R,
+            });
+        }
+        return list.ToArray();
+    }
+
     // ─────────────────────────────────────────────────────── LE RENDU ────────────────
     public override void OnPaintChart(PaintChartEventArgs args)
     {
         var conv = this.CurrentChart?.MainWindow?.CoordinatesConverter;
         if (conv is null) return;
         Trade[] trades;
-        DateTime finOuverte;
-        lock (_lock) { trades = _trades.ToArray(); finOuverte = _dernierTempsBarre; }
+        DateTime finOuverte = _dernierTempsBarre;
+        if (Source == ModeSource.Reel) trades = TradesReels();
+        else lock (_lock) trades = _trades.ToArray();
 
         var gr = args.Graphics;
         var rect = args.Rectangle;
@@ -250,20 +294,26 @@ public sealed class SmaBracketVisuelIndicator : Indicator
             float ySl = (float)conv.GetChartY(t.Sl);
             float yTp = (float)conv.GetChartY(t.Tp);
 
-            // Zones : à la clôture, mettre en ÉVIDENCE le côté atteint, estomper l'autre.
-            Brush bVert = t.SortieType == 'T' ? _vFort : t.SortieType == 'S' ? _vFaible : _vNeutre;
-            Brush bRouge = t.SortieType == 'S' ? _rFort : t.SortieType == 'T' ? _rFaible : _rNeutre;
-            RectVertical(gr, bVert, xL, w, yEntree, yTp);
-            RectVertical(gr, bRouge, xL, w, yEntree, ySl);
+            if (AfficherZones)
+            {
+                Brush bVert = t.SortieType == 'T' ? _vFort : t.SortieType == 'S' ? _vFaible : _vNeutre;
+                Brush bRouge = t.SortieType == 'S' ? _rFort : t.SortieType == 'T' ? _rFaible : _rNeutre;
+                RectVertical(gr, bVert, xL, w, yEntree, yTp);
+                RectVertical(gr, bRouge, xL, w, yEntree, ySl);
+            }
 
-            // Lignes pointillées SL/TP (+ fine ligne d'entrée), la touchée épaissie.
-            gr.DrawLine(t.SortieType == 'T' ? _lnTpFort : _lnTp, xL, yTp, xR, yTp);
-            gr.DrawLine(t.SortieType == 'S' ? _lnSlFort : _lnSl, xL, ySl, xR, ySl);
-            gr.DrawLine(_lnEntree, xL, yEntree, xR, yEntree);
+            if (AfficherLignes)
+            {
+                gr.DrawLine(t.SortieType == 'T' ? _lnTpFort : _lnTp, xL, yTp, xR, yTp);
+                gr.DrawLine(t.SortieType == 'S' ? _lnSlFort : _lnSl, xL, ySl, xR, ySl);
+            }
+            if (AfficherEntree)
+            {
+                gr.DrawLine(_lnEntree, xL, yEntree, xR, yEntree);
+                Triangle(gr, t.Sens > 0 ? _triLong : _triShort, xL, yEntree, t.Sens);
+            }
 
-            Triangle(gr, t.Sens > 0 ? _triLong : _triShort, xL, yEntree, t.Sens);
-
-            if (t.SortieTemps is not null)
+            if (t.SortieTemps is not null && AfficherSortie)
             {
                 var brush = t.SortieType switch { 'T' => _dotVert, 'S' => _dotRouge, _ => _dotOrange };
                 float yNiv = (float)conv.GetChartY(t.SortieNiveau);
@@ -275,10 +325,7 @@ public sealed class SmaBracketVisuelIndicator : Indicator
                     bool gain = t.Pts >= 0;
                     string s = $"{t.Pts.ToString("+0.0;-0.0", Inv)} ({t.R.ToString("+0.0;-0.0", Inv)}R)";
                     var sz = gr.MeasureString(s, _font);
-                    // Au bout de la zone (au-dessus du TP / sous le SL), centré sur la boîte,
-                    // avec un fond sombre : lisible même par-dessus les chandelles.
-                    float lx = xL + w / 2f - sz.Width / 2f;
-                    lx = Math.Max(rect.Left + 2f, Math.Min(lx, rect.Right - sz.Width - 6f));
+                    float lx = Math.Max(rect.Left + 2f, Math.Min(xL + w / 2f - sz.Width / 2f, rect.Right - sz.Width - 6f));
                     float ly = gain ? yTp - sz.Height - 3f : ySl + 3f;
                     gr.FillRectangle(_pillBg, lx - 3f, ly - 1f, sz.Width + 6f, sz.Height + 2f);
                     gr.DrawString(s, _font, gain ? _txtVert : _txtRouge, lx, ly);
@@ -301,7 +348,7 @@ public sealed class SmaBracketVisuelIndicator : Indicator
         }
         double taux = (tp + sl) > 0 ? 100.0 * tp / (tp + sl) : 0;
 
-        string l1 = "H1 SMA Bracket";
+        string l1 = "H1 SMA Bracket" + (Source == ModeSource.Reel ? " · réel" : " · simulation");
         string l2 = $"Trades {nb}   ·   TP {tp} / SL {sl}   ·   {taux.ToString("0", Inv)}%";
         string l3 = $"Cumul  {cumPts.ToString("+0.0;-0.0;0.0", Inv)} pts   ·   {cumR.ToString("+0.0;-0.0;0.0", Inv)} R";
 

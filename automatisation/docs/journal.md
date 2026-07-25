@@ -1,5 +1,30 @@
 # Journal du projet — décisions datées & mesures clés
 
+## 2026-07-24 (suite) — Visuels H1/H2/H3 : mode « Réel » (journal) + contrôles d'affichage
+
+Retour user : le visuel dessinait la situation « auto » (un trade à CHAQUE croisement) et non
+« confirmation » → il brouillait les captures (« Trades 402 » alors que 2-3 trades réels). Correctif
+sur les 3 visuels + une brique partagée :
+- **`hybrides/LecteurJournalTrades.cs`** (Compile Include dans les 3 csproj des visuels) : lit le
+  NDJSON du jour (le plus récent du dossier `<slug>`) et reconstruit les trades RÉELS par machine à
+  états (fill entrée → bracket_pose → stop_modifie\* → sortie_envoyee/annulation/fill). Extraction
+  JSON **manuelle** (pas de dépendance System.Text.Json, comme `JournalNdjson`). Throttle : relu
+  seulement si le fichier a grossi ; jamais d'exception vers le repaint. Enums partagés
+  `ModeSource`/`StyleTrait` remontés dans `Hybrides`.
+- **Paramètre `Source` : Simulation ⟷ Réel** sur H1/H2/H3. Réel = ne dessine QUE les trades
+  confirmés + panneau « … · réel » (vrais chiffres). En Réel, les params « stratégie » (Stop ×ATR,
+  cooldown, séance) ne servent plus — le journal fait foi.
+- **Contrôles d'affichage** : couleurs par élément, épaisseurs, style de la ligne d'entrée, opacité
+  des zones, on/off par élément (+ couleur d'annulation pour H3). GDI+ reconstruits dans `OnInit` ;
+  `Color` / enum `variants` / `LinesSeries[i].Color`+`.Width` **confirmés OK à la compile**.
+- 3 visuels recompilés net10.0 + redéployés (0 erreur). ⚠️ **RESTE À VALIDER à l'œil** :
+  l'**alignement horizontal** des trades réels (journal en UTC vs temps de barres Quantower) — si
+  décalé, un ajustement localisé dans le lecteur/mapping (il sert aux trois).
+
+Outillage terminal (même session) : `Suivre-Journal.bat` → `Suivre-Journal-H1.bat` (les 3 `.bat`
+homogènes) ; `suivre-journal.ps1` demande au lancement d'**afficher l'historique ou de repartir à
+zéro** (`-Neuf` pour forcer), + `Clear-Host` systématique.
+
 ## 2026-07-24 — Trailing H2 + annulation H3 PROUVÉS sur le vrai ordre Apex ; 3 bugs de la base corrigés
 
 Session de captures. Le user tourne H2 puis H3 en CONFIRMATION sur **MNQU6**. Trois bugs de

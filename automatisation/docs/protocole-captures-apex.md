@@ -24,6 +24,10 @@ triptyque, montage de la boucle vidéo, puis intégration au site (`site-content
   `stop_modifie` (escalier), `annulation`, sortie (fix 07-24). Le panneau Ordres/DOM reste la
   **preuve plateforme** du fill et du bracket (à filmer aussi), mais le journal n'est plus
   limité à la seule chaîne de décision. ⚠️ Ne vaut que sur le CONTRAT (voir point ci-dessus).
+- **Le visuel OnPaintChart : mettre `Source = Réel`** pour filmer (sinon il dessine la SIMULATION
+  auto — tous les croisements —, pas tes trades confirmés ; MAJ 07-24). Le mode Réel lit le même
+  journal que le terminal. Couleurs / épaisseurs / opacité / visibilité de chaque élément sont
+  désormais paramétrables (à régler pour la lisibilité 1080p).
 - Le moment filmé = **mode CONFIRMATION** (pop-up → clic → vrai ordre + bracket).
 
 ## 1. Le cockpit — disposition 1080p

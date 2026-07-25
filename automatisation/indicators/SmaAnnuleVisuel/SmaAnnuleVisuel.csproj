@@ -19,6 +19,7 @@
          formules, parité C#↔LEAN déjà mesurée). -->
     <Compile Include="..\..\hybrides\Indicateurs.cs" />
     <Compile Include="..\..\hybrides\CadreSeance.cs" />
+    <Compile Include="..\..\hybrides\LecteurJournalTrades.cs" />
   </ItemGroup>
 
   <ItemGroup>

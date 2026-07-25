@@ -7,22 +7,21 @@ using Hybrides;
 namespace SmaSuiveurVisuel;
 
 /// <summary>
-/// Hybride H2 SMA Suiveur — le VISUEL sur le graphique (graphe NQ 1 m). Rejoue la logique
-/// EXACTE de la stratégie `Hybride H2 SMA Suiveur (NQ)` et du jumeau `sma_suiveur_nq.py`
-/// (mêmes classes d'indicateurs — Compile Include de hybrides/Indicateurs.cs).
+/// Hybride H2 SMA Suiveur — le VISUEL sur le graphique (graphe NQ 1 m).
 ///
-/// Ce que H2 prouve = la MODIFICATION : le stop suiveur qui remonte marche par marche. Rendu :
-///   - deux SMA (rapide 2 = bleue, lente 6 = orange) en line series ;
-///   - le **stop suiveur en ESCALIER** (ligne ambre, une marche par barre) — le cœur du visuel ;
-///   - la **bande entre l'entrée et le stop** qui vire du **rouge** (encore à risque, stop sous
-///     l'entrée) au **vert** (profit verrouillé, stop passé de l'autre côté) ;
-///   - flèche d'entrée, **point de sortie sur le niveau de sortie** (coloré selon le gain/perte),
-///     étiquette de résultat (points + R), et un panneau de résultats (haut-droite).
-/// Pas de TP (H2 n'en a pas). Sorties : stop, croisement inverse, flat (si séance NY).
-/// Décisions AUX CLÔTURES de barres. N'émet rien.
+/// DEUX sources (paramètre « Source ») :
+///   • Simulation : rejoue la logique de la stratégie sur les barres — un trade à CHAQUE
+///     croisement (utile pour montrer ce que ferait l'AUTO) ;
+///   • Réel : lit le journal NDJSON du jour (via <see cref="LecteurJournalTrades"/>) et ne
+///     dessine QUE tes trades confirmés — l'escalier RÉEL du stop, tes vrais chiffres.
+///
+/// Rendu (OnPaintChart) : escalier ambre du stop suiveur, bande risque(rouge)/profit(vert),
+/// flèche d'entrée, point de sortie, étiquettes, panneau. Couleurs / épaisseurs / opacité /
+/// visibilité de chaque élément sont paramétrables. Décisions aux clôtures. N'émet rien.
 /// </summary>
 public sealed class SmaSuiveurVisuelIndicator : Indicator
 {
+    // ── Stratégie (mêmes formules que H2) ──────────────────────────────────────────────
     [InputParameter("SMA rapide (1 m)", 0, 2, 100, 1, 0)]
     public int SmaRapide = 2;
 
@@ -50,11 +49,39 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
     [InputParameter("Restreindre à la séance NY (décoché = 24 h)", 9)]
     public bool SeanceNY = false;
 
-    [InputParameter("Panneau de résultats", 10)]
-    public bool AfficherPanneau = true;
+    // ── Source ─────────────────────────────────────────────────────────────────────────
+    [InputParameter("Source", 12, variants: new object[]
+        { "Simulation (auto)", ModeSource.Simulation, "Réel (journal confirmé)", ModeSource.Reel })]
+    public ModeSource Source = ModeSource.Simulation;
 
-    [InputParameter("Étiquette de résultat par trade", 11)]
-    public bool AfficherEtiquettes = true;
+    [InputParameter("Dossier des journaux (mode Réel)", 13)]
+    public string DossierJournaux = @"H:\IndicesBoursiers\automatisation\journaux";
+
+    // ── Visibilité par élément ─────────────────────────────────────────────────────────
+    [InputParameter("Afficher les SMA", 14)] public bool AfficherSma = true;
+    [InputParameter("Afficher l'escalier du stop", 15)] public bool AfficherEscalier = true;
+    [InputParameter("Afficher la bande risque/profit", 16)] public bool AfficherBande = true;
+    [InputParameter("Afficher l'entrée (flèche + ligne)", 17)] public bool AfficherEntree = true;
+    [InputParameter("Afficher le point de sortie", 18)] public bool AfficherSortie = true;
+    [InputParameter("Panneau de résultats", 10)] public bool AfficherPanneau = true;
+    [InputParameter("Étiquette de résultat par trade", 11)] public bool AfficherEtiquettes = true;
+
+    // ── Couleurs ───────────────────────────────────────────────────────────────────────
+    [InputParameter("Couleur SMA rapide", 20)] public Color CoulSmaRapide = Color.DodgerBlue;
+    [InputParameter("Couleur SMA lente", 21)] public Color CoulSmaLente = Color.Orange;
+    [InputParameter("Couleur escalier du stop", 22)] public Color CoulEscalier = Color.FromArgb(255, 255, 190, 70);
+    [InputParameter("Couleur zone à risque", 23)] public Color CoulZoneRisque = Color.OrangeRed;
+    [InputParameter("Couleur zone de profit", 24)] public Color CoulZoneProfit = Color.LimeGreen;
+    [InputParameter("Couleur entrée longue", 25)] public Color CoulEntreeLong = Color.LimeGreen;
+    [InputParameter("Couleur entrée courte", 26)] public Color CoulEntreeShort = Color.Red;
+
+    // ── Traits / opacité ───────────────────────────────────────────────────────────────
+    [InputParameter("Épaisseur des SMA", 30, 1, 6, 1, 0)] public int EpaisseurSma = 2;
+    [InputParameter("Épaisseur de l'escalier", 31, 0.5, 6, 0.5, 1)] public double EpaisseurEscalier = 2.2;
+    [InputParameter("Style ligne d'entrée", 32, variants: new object[]
+        { "Points", StyleTrait.Points, "Tirets", StyleTrait.Tirets, "Plein", StyleTrait.Plein })]
+    public StyleTrait StyleEntree = StyleTrait.Points;
+    [InputParameter("Opacité des zones (0-255)", 33, 0, 255, 1, 0)] public int OpaciteZones = 40;
 
     private const int LRapide = 0, LLente = 1;
     private const int MaxTrades = 1000;
@@ -62,6 +89,7 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
 
     private DeclencheurSmaCross _cross = null!;
     private AtrWilder _atr = null!;
+    private LecteurJournalTrades? _lecteur;
     private int _debut, _fin, _flat;
     private double _tick = 0.25;
 
@@ -69,8 +97,8 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
     {
         public DateTime EntreeTemps;
         public double EntreePrix, StopInitial, Stop, Extreme;
-        public int Sens;                          // +1 long, -1 short
-        public readonly List<(DateTime t, double stop)> Trail = new();  // le stop à chaque barre
+        public int Sens;
+        public readonly List<(DateTime t, double stop)> Trail = new();
         public DateTime? SortieTemps;
         public double SortieNiveau;
         public char SortieType;                   // 'S' stop, 'X' croisement inverse, 'F' flat
@@ -84,16 +112,11 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
     private DateTime _dernierTempsBarre = DateTime.MinValue;
     private DateTime _sortieUtc = DateTime.MinValue;
 
-    // GDI+ (créés une fois).
-    private readonly Brush _fillVert = new SolidBrush(Color.FromArgb(40, Color.LimeGreen));
-    private readonly Brush _fillRouge = new SolidBrush(Color.FromArgb(40, Color.OrangeRed));
-    private readonly Pen _stopPen = new(Color.FromArgb(235, 255, 190, 70), 2.2f);      // escalier ambre
-    private readonly Pen _lnEntree = new(Color.FromArgb(120, Color.Gainsboro), 1f) { DashStyle = DashStyle.Dot };
-    private readonly Brush _dotVert = new SolidBrush(Color.LimeGreen);
-    private readonly Brush _dotRouge = new SolidBrush(Color.Red);
-    private readonly Pen _dotBord = new(Color.FromArgb(230, 20, 24, 30), 1.2f);
-    private readonly Brush _triLong = new SolidBrush(Color.LimeGreen);
-    private readonly Brush _triShort = new SolidBrush(Color.Red);
+    // GDI+ reconstruits dans OnInit (dépendent des paramètres).
+    private Brush _fillProfit = null!, _fillRisque = null!;
+    private Pen _stopPen = null!, _lnEntree = null!;
+    private Brush _triLong = null!, _triShort = null!, _dotVert = null!, _dotRouge = null!;
+    private Pen _dotBord = null!;
     private readonly Brush _txtVert = new SolidBrush(Color.FromArgb(240, 190, 255, 190));
     private readonly Brush _txtRouge = new SolidBrush(Color.FromArgb(240, 255, 180, 165));
     private readonly Brush _pillBg = new SolidBrush(Color.FromArgb(195, 14, 18, 24));
@@ -108,10 +131,10 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
     public SmaSuiveurVisuelIndicator()
     {
         Name = "Hybride H2 SMA Suiveur (visuel)";
-        Description = "Croisement SMA 2/6 (1 m) + stop suiveur en escalier — visuel de la stratégie H2 (graphe NQ 1 m)";
+        Description = "Croisement SMA 2/6 (1 m) + stop suiveur en escalier — simulation OU journal réel (graphe NQ 1 m)";
         SeparateWindow = false;
-        AddLineSeries("SMA rapide (2)", Color.DodgerBlue, 2, LineStyle.Solid);
-        AddLineSeries("SMA lente (6)", Color.Orange, 2, LineStyle.Solid);
+        AddLineSeries("SMA rapide", Color.DodgerBlue, 2, LineStyle.Solid);
+        AddLineSeries("SMA lente", Color.Orange, 2, LineStyle.Solid);
     }
 
     protected override void OnInit()
@@ -126,7 +149,37 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
         _dernierTempsBarre = DateTime.MinValue;
         _sortieUtc = DateTime.MinValue;
         lock (_lock) { _trades.Clear(); _courant = null; }
+        _lecteur = new LecteurJournalTrades(DossierJournaux, "sma_suiveur_nq", _tick);
+        ConstruireStyles();
     }
+
+    private void ConstruireStyles()
+    {
+        int op = Math.Clamp(OpaciteZones, 0, 255);
+        _fillProfit = new SolidBrush(Color.FromArgb(op, CoulZoneProfit));
+        _fillRisque = new SolidBrush(Color.FromArgb(op, CoulZoneRisque));
+        _stopPen = new Pen(CoulEscalier, (float)Math.Max(0.5, EpaisseurEscalier));
+        _lnEntree = new Pen(Color.FromArgb(120, Color.Gainsboro), 1f) { DashStyle = Dash(StyleEntree) };
+        _triLong = new SolidBrush(CoulEntreeLong);
+        _triShort = new SolidBrush(CoulEntreeShort);
+        _dotVert = new SolidBrush(CoulZoneProfit);
+        _dotRouge = new SolidBrush(CoulZoneRisque);
+        _dotBord = new Pen(Color.FromArgb(230, 20, 24, 30), 1.2f);
+
+        // Les SMA sont des line series natives : on applique couleur/épaisseur/visibilité ici.
+        int w = Math.Max(1, EpaisseurSma);
+        LinesSeries[LRapide].Color = AfficherSma ? CoulSmaRapide : Color.Transparent;
+        LinesSeries[LLente].Color = AfficherSma ? CoulSmaLente : Color.Transparent;
+        LinesSeries[LRapide].Width = w;
+        LinesSeries[LLente].Width = w;
+    }
+
+    private static DashStyle Dash(StyleTrait s) => s switch
+    {
+        StyleTrait.Plein => DashStyle.Solid,
+        StyleTrait.Tirets => DashStyle.Dash,
+        _ => DashStyle.Dot,
+    };
 
     protected override void OnUpdate(UpdateArgs args)
     {
@@ -162,9 +215,14 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
             SetValue(_cross.Rapide, LRapide, offset);
             SetValue(_cross.Lente, LLente, offset);
         }
+
+        // En mode Réel, les SMA restent calculées ci-dessus mais les TRADES viennent du journal
+        // (pas de simulation) : on s'arrête ici.
+        if (Source == ModeSource.Reel) return;
+
         int cr = _cross.Croisement;
 
-        // 1) EN POSITION : stop (prioritaire), flat, croisement inverse, sinon suiveur.
+        // 1) EN POSITION : extrême favorable + stop suiveur, à CHAQUE barre 1 m.
         if (_courant is { } tr)
         {
             tr.Extreme = tr.Sens > 0 ? Math.Max(tr.Extreme, haut) : Math.Min(tr.Extreme, bas);
@@ -181,7 +239,7 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
                     : Math.Round((tr.Extreme + StopMult * _atr.Valeur) / _tick) * _tick;
                 if ((tr.Sens > 0 && cand > tr.Stop) || (tr.Sens < 0 && cand < tr.Stop))
                     tr.Stop = cand;
-                lock (_lock) tr.Trail.Add((ouverture, tr.Stop));   // une marche par barre
+                lock (_lock) tr.Trail.Add((ouverture, tr.Stop));
             }
             return;
         }
@@ -193,12 +251,8 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
             stopInit = Math.Round(stopInit / _tick) * _tick;
             var t = new Trade
             {
-                EntreeTemps = ouverture,
-                EntreePrix = close,
-                Sens = cr,
-                StopInitial = stopInit,
-                Stop = stopInit,
-                Extreme = close,
+                EntreeTemps = ouverture, EntreePrix = close, Sens = cr,
+                StopInitial = stopInit, Stop = stopInit, Extreme = close,
             };
             t.Trail.Add((ouverture, stopInit));
             lock (_lock)
@@ -220,7 +274,7 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
             t.SortieNiveau = niveau;
             t.SortieType = type;
             t.Pts = (niveau - t.EntreePrix) * t.Sens;
-            double risque = Math.Abs(t.EntreePrix - t.StopInitial);   // 1R = risque initial
+            double risque = Math.Abs(t.EntreePrix - t.StopInitial);
             t.R = risque > 0 ? t.Pts / risque : 0;
             _courant = null;
         }
@@ -230,14 +284,38 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
     private bool CooldownOk(DateTime finUtc) =>
         _sortieUtc == DateTime.MinValue || (finUtc - _sortieUtc).TotalMinutes >= CooldownMin;
 
+    /// <summary>Mappe les trades réels du journal vers la structure de rendu.</summary>
+    private Trade[] TradesReels()
+    {
+        var reels = _lecteur?.Trades(DateTime.UtcNow) ?? Array.Empty<LecteurJournalTrades.TradeReel>();
+        var list = new List<Trade>(reels.Length);
+        foreach (var r in reels)
+        {
+            var t = new Trade
+            {
+                EntreeTemps = r.EntreeTemps, EntreePrix = r.EntreePrix, Sens = r.Sens,
+                StopInitial = double.IsNaN(r.StopInitial) ? r.Sl : r.StopInitial,
+                Stop = r.Sl, Extreme = r.EntreePrix,
+                SortieTemps = r.SortieTemps, SortieNiveau = r.SortieNiveau,
+                SortieType = r.SortieType, Pts = r.Pts, R = r.R,
+            };
+            foreach (var st in r.Trail) t.Trail.Add(st);
+            list.Add(t);
+        }
+        return list.ToArray();
+    }
+
     // ─────────────────────────────────────────────────────── LE RENDU ────────────────
     public override void OnPaintChart(PaintChartEventArgs args)
     {
         var conv = this.CurrentChart?.MainWindow?.CoordinatesConverter;
         if (conv is null) return;
         Trade[] trades;
-        DateTime finOuverte;
-        lock (_lock) { trades = _trades.ToArray(); finOuverte = _dernierTempsBarre; }
+        DateTime finOuverte = _dernierTempsBarre;
+        if (Source == ModeSource.Reel)
+            trades = TradesReels();
+        else
+            lock (_lock) trades = _trades.ToArray();
 
         var gr = args.Graphics;
         var rect = args.Rectangle;
@@ -252,11 +330,11 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
             if (xR < rect.Left - 4 || xL > rect.Right + 4) continue;
             float yEntree = (float)conv.GetChartY(t.EntreePrix);
 
-            (DateTime t, double stop)[] trail;
-            lock (_lock) trail = t.Trail.ToArray();
+            (DateTime t, double stop)[] trail = t.Trail.ToArray();
 
-            // Ligne d'entrée (référence) + escalier du stop avec bande risque(rouge)/profit(vert).
-            gr.DrawLine(_lnEntree, xL, yEntree, xR, yEntree);
+            if (AfficherEntree)
+                gr.DrawLine(_lnEntree, xL, yEntree, xR, yEntree);
+
             for (int i = 0; i < trail.Length; i++)
             {
                 float xi = (float)conv.GetChartX(trail[i].t);
@@ -264,18 +342,23 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
                 if (xn < xi) xn = xi;
                 float yi = (float)conv.GetChartY(trail[i].stop);
                 bool profit = t.Sens > 0 ? trail[i].stop > t.EntreePrix : trail[i].stop < t.EntreePrix;
-                RectVertical(gr, profit ? _fillVert : _fillRouge, xi, xn - xi, yi, yEntree);
-                gr.DrawLine(_stopPen, xi, yi, xn, yi);                       // marche horizontale
-                if (i + 1 < trail.Length)                                    // contremarche verticale
+                if (AfficherBande)
+                    RectVertical(gr, profit ? _fillProfit : _fillRisque, xi, xn - xi, yi, yEntree);
+                if (AfficherEscalier)
                 {
-                    float yn = (float)conv.GetChartY(trail[i + 1].stop);
-                    gr.DrawLine(_stopPen, xn, yi, xn, yn);
+                    gr.DrawLine(_stopPen, xi, yi, xn, yi);
+                    if (i + 1 < trail.Length)
+                    {
+                        float yn = (float)conv.GetChartY(trail[i + 1].stop);
+                        gr.DrawLine(_stopPen, xn, yi, xn, yn);
+                    }
                 }
             }
 
-            Triangle(gr, t.Sens > 0 ? _triLong : _triShort, xL, yEntree, t.Sens);
+            if (AfficherEntree)
+                Triangle(gr, t.Sens > 0 ? _triLong : _triShort, xL, yEntree, t.Sens);
 
-            if (t.SortieTemps is not null)
+            if (t.SortieTemps is not null && AfficherSortie)
             {
                 bool gain = t.Pts >= 0;
                 float yNiv = (float)conv.GetChartY(t.SortieNiveau);
@@ -309,7 +392,7 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
         }
         double taux = nb > 0 ? 100.0 * gagn / nb : 0;
 
-        string l1 = "H2 SMA Suiveur";
+        string l1 = "H2 SMA Suiveur" + (Source == ModeSource.Reel ? " · réel" : " · simulation");
         string l2 = $"Trades {nb}   ·   {taux.ToString("0", Inv)}% gagnants";
         string l3 = $"Cumul  {cumPts.ToString("+0.0;-0.0;0.0", Inv)} pts   ·   {cumR.ToString("+0.0;-0.0;0.0", Inv)} R";
 

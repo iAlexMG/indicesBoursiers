@@ -103,9 +103,20 @@ zone, les deux côtés estompés — ni SL ni TP atteint). Panneau : TP / SL / a
 formules que la stratégie et le jumeau `sma_annule_nq.py`. net10.0.
 **Déployer :** `powershell -File indicators\SmaAnnuleVisuel\deploy.ps1`.
 
-**Les 3 visuels hybrides partagent** : mêmes SMA 9/21 + ATR14 (Compile Include de
+**Les 3 visuels hybrides partagent** : mêmes SMA + ATR (Compile Include de
 `hybrides/Indicateurs.cs`), rendu `OnPaintChart` (réf `System.Drawing.Common` du `bin\System`),
-panneau de résultats + étiquettes (points + R), mode 24 h par défaut.
+panneau de résultats + étiquettes (points + R), mode 24 h par défaut. **MAJ 2026-07-24** — deux
+ajouts partagés (Compile Include de `hybrides/LecteurJournalTrades.cs`) :
+- **Paramètre `Source` : Simulation ⟷ Réel.** *Simulation* = auto (un trade par croisement, le
+  comportement d'origine). **Réel** = lit le journal NDJSON du jour (`<dossier>\<slug>`, le MÊME
+  fichier que le terminal `suivre-journal.ps1`) et ne dessine QUE les trades **confirmés** sur le
+  compte — corrige le fait que le visuel montrait la situation « auto » et non « confirmation ». Le
+  panneau affiche alors les vrais chiffres (« … · réel »). Le lecteur reconstruit les trades par
+  machine à états (fill entrée → bracket_pose → stop_modifie\* → sortie/annulation), en extraction
+  JSON manuelle (pas de dépendance System.Text.Json), relu quand le fichier grossit.
+- **Contrôles d'affichage** : couleur de chaque élément (SMA, zones, escalier/bracket, entrée,
+  sortie, annulation pour H3), épaisseurs, style de la ligne d'entrée, opacité des zones, et un
+  **on/off par élément**. GDI+ reconstruits dans `OnInit` à partir des paramètres.
 
 ## `Signaux NQ (strat. avancée)` — marqueurs entrée/sortie sur le graphe
 
