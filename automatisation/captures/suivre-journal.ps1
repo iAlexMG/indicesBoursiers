@@ -29,7 +29,8 @@ param(
     [string]$Base = 'H:\IndicesBoursiers\automatisation\journaux',
     [string]$Fichier = '',
     [int]$Tail = 12,
-    [switch]$Instantane
+    [switch]$Instantane,
+    [switch]$Neuf
 )
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -40,6 +41,22 @@ $Et  = [System.TimeZoneInfo]::FindSystemTimeZoneById('Eastern Standard Time')
 $slugs = @{ 'H1' = 'sma_bracket_nq'; 'H2' = 'sma_suiveur_nq'; 'H3' = 'sma_annule_nq' }
 $cle = $Strategie.ToUpper()
 if ($slugs.ContainsKey($cle)) { $slug = $slugs[$cle] } else { $slug = $Strategie }
+
+# Choix au lancement (fenêtre interactive) : garder l'historique déjà affiché, ou repartir
+# à zéro. Sert à filmer une nouvelle prise sans les événements de l'essai précédent.
+# -Instantane (rejeu one-shot) et -Neuf (forcé zéro) sautent la question.
+if (-not $Instantane) {
+    if ($Neuf) {
+        $Tail = 0
+    }
+    else {
+        Write-Host ''
+        Write-Host '  Historique déjà présent dans le journal du jour ?' -ForegroundColor Cyan
+        Write-Host "    [Entrée] : l'AFFICHER (les $Tail dernières lignes, puis suivre en direct)" -ForegroundColor DarkGray
+        Write-Host '    [n]      : repartir à ZÉRO (écran vierge, n''afficher que les nouveaux)' -ForegroundColor DarkGray
+        if ((Read-Host '  Choix') -match '^\s*[nN]') { $Tail = 0 }
+    }
+}
 
 function Trouver-Fichier($dir) {
     Get-ChildItem $dir -Filter *.ndjson -ErrorAction SilentlyContinue |
@@ -65,6 +82,7 @@ else {
     $cible = $f.FullName
 }
 
+Clear-Host   # écran net à chaque lancement (règle le scrollback des prises précédentes)
 Write-Host ''
 Write-Host "  Journal : $cible" -ForegroundColor Gray
 Write-Host "  $slug   .   heures en ET   .   compte masque   .   Ctrl+C pour arreter" -ForegroundColor DarkGray
