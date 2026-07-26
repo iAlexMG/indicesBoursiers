@@ -22,6 +22,9 @@ logs/
 *.db-shm
 *.sqlite
 
+# Notes de travail internes (jamais publiées)
+REPRISE*.md
+
 # Système
 Thumbs.db
 .DS_Store
