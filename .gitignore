@@ -22,6 +22,11 @@ logs/
 *.db-shm
 *.sqlite
 
+# Prises vidéo brutes de tournage (le montage web léger va sur le site, pas la source)
+*.mkv
+*.mov
+captures/*.mp4
+
 # Notes de travail internes (jamais publiées)
 REPRISE*.md
 

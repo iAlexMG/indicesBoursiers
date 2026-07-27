@@ -23,10 +23,10 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
 {
     // ── Stratégie (mêmes formules que H2) ──────────────────────────────────────────────
     [InputParameter("SMA rapide (1 m)", 0, 2, 100, 1, 0)]
-    public int SmaRapide = 2;
+    public int SmaRapide = 3;
 
     [InputParameter("SMA lente (1 m)", 1, 3, 200, 1, 0)]
-    public int SmaLente = 6;
+    public int SmaLente = 9;
 
     [InputParameter("Période ATR (1 m)", 2, 2, 100, 1, 0)]
     public int AtrPeriode = 7;
@@ -130,8 +130,8 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
 
     public SmaSuiveurVisuelIndicator()
     {
-        Name = "Hybride H2 SMA Suiveur (visuel)";
-        Description = "Croisement SMA 2/6 (1 m) + stop suiveur en escalier — simulation OU journal réel (graphe NQ 1 m)";
+        Name = "SMA Suiveur";
+        Description = "Croisement SMA 3/9 (1 m) + stop suiveur en escalier — simulation OU journal réel (graphe NQ 1 m)";
         SeparateWindow = false;
         AddLineSeries("SMA rapide", Color.DodgerBlue, 2, LineStyle.Solid);
         AddLineSeries("SMA lente", Color.Orange, 2, LineStyle.Solid);
@@ -392,7 +392,7 @@ public sealed class SmaSuiveurVisuelIndicator : Indicator
         }
         double taux = nb > 0 ? 100.0 * gagn / nb : 0;
 
-        string l1 = "H2 SMA Suiveur" + (Source == ModeSource.Reel ? " · réel" : " · simulation");
+        string l1 = "SMA Suiveur" + (Source == ModeSource.Reel ? " · réel" : " · simulation");
         string l2 = $"Trades {nb}   ·   {taux.ToString("0", Inv)}% gagnants";
         string l3 = $"Cumul  {cumPts.ToString("+0.0;-0.0;0.0", Inv)} pts   ·   {cumR.ToString("+0.0;-0.0;0.0", Inv)} R";
 

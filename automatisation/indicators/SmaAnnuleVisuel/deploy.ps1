@@ -20,4 +20,4 @@ foreach ($f in "SmaAnnuleVisuel.dll","SmaAnnuleVisuel.deps.json","SmaAnnuleVisue
     Copy-Item (Join-Path $out $f) $dest -Force
 }
 Write-Host "Deploye dans : $dest"
-Write-Host "Redemarrer Quantower, puis : graphe NQ 1 m -> clic droit -> Add indicator -> 'Hybride H3 SMA Annulation (visuel)'."
+Write-Host "Redemarrer Quantower, puis : graphe NQ 1 m -> clic droit -> Add indicator -> 'SMA Annulation'."

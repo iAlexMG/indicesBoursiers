@@ -3,12 +3,12 @@ using TradingPlatform.BusinessLayer;
 namespace Hybrides;
 
 /// <summary>
-/// H2 — Croisement SMA 2/6 (1 m) + stop suiveur · mécanique : tendance · PROUVE : la
+/// H2 — Croisement SMA 3/9 (1 m) + stop suiveur · mécanique : tendance · PROUVE : la
 /// MODIFICATION d'ordre (le stop remonté plusieurs fois dans un même trade).
 /// Refonte 2026-07-20 : même déclencheur COMMUN que H1/H3 (croisement SMA 1 m), porté du
 /// 5 m au 1 m et sans filtre de régime. La différence de H2, c'est le stop suiveur.
 /// Jumeau LEAN : backtesting/backtests/algorithms/sma_suiveur_nq.py.
-///   - Signal : croisement SMA 2/6 sur closes 1 m (seedé). Croisement → market ×1 +
+///   - Signal : croisement SMA 3/9 sur closes 1 m (seedé). Croisement → market ×1 +
 ///     SL attaché initial à 2 × ATR14 (1 m). PAS de TP.
 ///   - Suiveur : à CHAQUE barre 1 m, ModifyOrder du stop vers
 ///     max(stop courant, extrême favorable depuis l'entrée ∓ 2×ATR) — ne recule JAMAIS.
@@ -18,10 +18,10 @@ namespace Hybrides;
 public sealed class SmaSuiveurHybride : HybrideStrategyBase
 {
     [InputParameter("SMA rapide (barres 1 m)", 20, 2, 100, 1, 0)]
-    public int SmaRapide = 2;
+    public int SmaRapide = 3;
 
     [InputParameter("SMA lente (barres 1 m)", 21, 3, 200, 1, 0)]
-    public int SmaLente = 6;
+    public int SmaLente = 9;
 
     [InputParameter("Période ATR (barres 1 m)", 22, 2, 100, 1, 0)]
     public int AtrPeriode = 7;
@@ -36,8 +36,8 @@ public sealed class SmaSuiveurHybride : HybrideStrategyBase
 
     public SmaSuiveurHybride()
     {
-        Name = "Hybride H2 SMA Suiveur (NQ)";
-        Description = "Croisement SMA 2/6 (1 m) + stop suiveur par modification d'ordre — jumeau LEAN : sma_suiveur_nq.py";
+        Name = "SMA Suiveur";
+        Description = "Croisement SMA 3/9 (1 m) + stop suiveur par modification d'ordre — jumeau LEAN : sma_suiveur_nq.py";
     }
 
     protected override string Slug => "sma_suiveur_nq";

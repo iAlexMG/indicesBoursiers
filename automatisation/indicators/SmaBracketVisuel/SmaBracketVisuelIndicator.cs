@@ -17,8 +17,8 @@ namespace SmaBracketVisuel;
 /// </summary>
 public sealed class SmaBracketVisuelIndicator : Indicator
 {
-    [InputParameter("SMA rapide (1 m)", 0, 2, 100, 1, 0)] public int SmaRapide = 2;
-    [InputParameter("SMA lente (1 m)", 1, 3, 200, 1, 0)] public int SmaLente = 6;
+    [InputParameter("SMA rapide (1 m)", 0, 2, 100, 1, 0)] public int SmaRapide = 3;
+    [InputParameter("SMA lente (1 m)", 1, 3, 200, 1, 0)] public int SmaLente = 9;
     [InputParameter("Période ATR (1 m)", 2, 2, 100, 1, 0)] public int AtrPeriode = 7;
     [InputParameter("Stop (× ATR)", 3, 0.5, 10, 0.5, 1)] public double StopMult = 1.0;
     [InputParameter("Take profit (× R)", 4, 0.5, 10, 0.5, 1)] public double TpR = 1.0;
@@ -104,8 +104,8 @@ public sealed class SmaBracketVisuelIndicator : Indicator
 
     public SmaBracketVisuelIndicator()
     {
-        Name = "Hybride H1 SMA Bracket (visuel)";
-        Description = "Croisement SMA 2/6 (1 m) + zone de trade (bracket) — simulation OU journal réel (graphe NQ 1 m)";
+        Name = "SMA Bracket";
+        Description = "Croisement SMA 3/9 (1 m) + zone de trade (bracket) — simulation OU journal réel (graphe NQ 1 m)";
         SeparateWindow = false;
         AddLineSeries("SMA rapide", Color.DodgerBlue, 2, LineStyle.Solid);
         AddLineSeries("SMA lente", Color.Orange, 2, LineStyle.Solid);
@@ -348,7 +348,7 @@ public sealed class SmaBracketVisuelIndicator : Indicator
         }
         double taux = (tp + sl) > 0 ? 100.0 * tp / (tp + sl) : 0;
 
-        string l1 = "H1 SMA Bracket" + (Source == ModeSource.Reel ? " · réel" : " · simulation");
+        string l1 = "SMA Bracket" + (Source == ModeSource.Reel ? " · réel" : " · simulation");
         string l2 = $"Trades {nb}   ·   TP {tp} / SL {sl}   ·   {taux.ToString("0", Inv)}%";
         string l3 = $"Cumul  {cumPts.ToString("+0.0;-0.0;0.0", Inv)} pts   ·   {cumR.ToString("+0.0;-0.0;0.0", Inv)} R";
 

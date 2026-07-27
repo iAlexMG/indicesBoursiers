@@ -35,8 +35,8 @@ triptyque, montage de la boucle vidéo, puis intégration au site (`site-content
 Quatre zones + le pop-up flottant. Le fil numéroté 1→6 est l'ordre de lecture (annoté en post).
 
 - **Graphique NQ 1 m** — gauche, ~64 % de large, pleine hauteur sauf le bandeau du bas.
-  Charge la stratégie **et** son indicateur visuel jumeau (`Hybride H2 SMA Suiveur (visuel)`,
-  etc.) : SMA 2 (bleue) / 6 (ambre), escalier ambre du stop suiveur, bande rouge→verte
+  Charge la stratégie **et** son indicateur visuel jumeau (`SMA Suiveur`, `SMA Bracket`,
+  `SMA Annulation`) : SMA 3 (bleue) / 9 (ambre), escalier ambre du stop suiveur, bande rouge→verte
   risque/profit, triangle d'entrée, point de sortie, étiquette `+pts (R)`, panneau résultats
   haut-droite — **plus** les lignes d'ordre réelles (fill + SL + TP) tracées par Quantower.
 - **Colonne droite ~36 %**, coupée en deux :
@@ -62,7 +62,7 @@ Le fil : **1** signal (croisement) → **2** proposition (pop-up) → **3** jour
   2. le NDJSON lui-même — la ligne `demarrage` contient le numéro **et le nom légal**.
      `suivre-journal.ps1` les masque tout seul → rendu `(compte masqué)`, **plus aucun
      « Apex »**. Si tu tail le JSON brut à la place, c'est à toi de le gérer.
-- **Palette = celle du code** (rien à réinventer) : SMA 9 bleue, SMA 21 + stop ambre, entrée
+- **Palette = celle du code** (rien à réinventer) : SMA 3 bleue, SMA 9 + stop ambre, entrée
   verte, sortie rouge, TP bleu. Réutilisée dans l'annotation → l'œil relie image et légende.
 
 ## 3. Le terminal — `suivre-journal.ps1`
@@ -107,7 +107,7 @@ Enregistre en **1080p avec OBS Studio** (sortie mp4 propre). Un cycle CONFIRMATI
 | t | À l'écran | Beat |
 |---|---|---|
 | 0–5 s | vue d'ensemble : SMA qui convergent, terminal calme | plan large |
-| ~5 s | **croisement SMA 2/6** → signal détecté | **1** |
+| ~5 s | **croisement SMA 3/9** → signal détecté | **1** |
 | ~8 s | **pop-up de confirmation** (« ENTRÉE LONG ? ») | **2** |
 | ~12 s | `SIGNAL` puis `PROPOSITION` défilent au terminal | **3** |
 | ~14 s | **clic Confirmer** → **ordre rempli + bracket SL/TP** dans Ordres et sur le chart | **4** |

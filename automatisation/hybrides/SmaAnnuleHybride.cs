@@ -3,13 +3,13 @@ using TradingPlatform.BusinessLayer;
 namespace Hybrides;
 
 /// <summary>
-/// H3 — Croisement SMA 2/6 (1 m) + bracket + annulation · mécanique : sortie sur signal ·
+/// H3 — Croisement SMA 3/9 (1 m) + bracket + annulation · mécanique : sortie sur signal ·
 /// PROUVE : l'ANNULATION du bracket (fermeture au croisement inverse, AVANT SL/TP).
 /// Refonte 2026-07-20 : même déclencheur COMMUN que H1/H2 (croisement SMA 1 m). H3 = H1
 /// (bracket) MAIS elle sort aussi au croisement inverse en annulant le bracket encore
 /// ouvert — c'est la seule différence, et c'est ce mécanisme qu'elle prouve.
 /// Jumeau LEAN : backtesting/backtests/algorithms/sma_annule_nq.py.
-///   - Signal : croisement SMA 2/6 sur closes 1 m (seedé). Croisement → market ×1 +
+///   - Signal : croisement SMA 3/9 sur closes 1 m (seedé). Croisement → market ×1 +
 ///     bracket SL/TP complet.
 ///   - SL = 1,0 × ATR14 (1 m) | TP = 2R (large : le croisement inverse tombe souvent avant,
 ///     ce qui exerce l'annulation).
@@ -19,10 +19,10 @@ namespace Hybrides;
 public sealed class SmaAnnuleHybride : HybrideStrategyBase
 {
     [InputParameter("SMA rapide (barres 1 m)", 20, 2, 100, 1, 0)]
-    public int SmaRapide = 2;
+    public int SmaRapide = 3;
 
     [InputParameter("SMA lente (barres 1 m)", 21, 3, 200, 1, 0)]
-    public int SmaLente = 6;
+    public int SmaLente = 9;
 
     [InputParameter("Période ATR (barres 1 m)", 22, 2, 100, 1, 0)]
     public int AtrPeriode = 7;
@@ -38,8 +38,8 @@ public sealed class SmaAnnuleHybride : HybrideStrategyBase
 
     public SmaAnnuleHybride()
     {
-        Name = "Hybride H3 SMA Annulation (NQ)";
-        Description = "Croisement SMA 2/6 (1 m), bracket + annulation au croisement inverse — jumeau LEAN : sma_annule_nq.py";
+        Name = "SMA Annulation";
+        Description = "Croisement SMA 3/9 (1 m), bracket + annulation au croisement inverse — jumeau LEAN : sma_annule_nq.py";
     }
 
     protected override string Slug => "sma_annule_nq";

@@ -20,4 +20,4 @@ foreach ($f in "SmaSuiveurVisuel.dll","SmaSuiveurVisuel.deps.json","SmaSuiveurVi
     Copy-Item (Join-Path $out $f) $dest -Force
 }
 Write-Host "Deploye dans : $dest"
-Write-Host "Redemarrer Quantower, puis : graphe NQ 1 m -> clic droit -> Add indicator -> 'Hybride H2 SMA Suiveur (visuel)'."
+Write-Host "Redemarrer Quantower, puis : graphe NQ 1 m -> clic droit -> Add indicator -> 'SMA Suiveur'."

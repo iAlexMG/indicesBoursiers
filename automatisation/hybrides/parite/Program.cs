@@ -1,6 +1,6 @@
 // Parité indicateurs C# (Hybrides) vs LEAN (jumeaux, refonte 1 m du 2026-07-20) : rejoue le
 // CSV 1 m canonique dans les classes de Indicateurs.cs et imprime, à chaque barre 1 m, les
-// valeurs du déclencheur commun (SMA 9/21) et de l'ATR14 — tout sur 1 m.
+// valeurs du déclencheur commun (SMA 3/9) et de l'ATR14 — tout sur 1 m.
 // Sortie : ts_fin_utc;sma9;sma21;atr  (InvariantCulture)
 using System.Globalization;
 using Hybrides;
@@ -10,7 +10,7 @@ string csv = args.Length > 0 ? args[0] : @"H:\IndicesBoursiers\historique\ohlcv\
 var de = DateTime.Parse(args.Length > 1 ? args[1] : "2026-06-01", inv, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
 var a = DateTime.Parse(args.Length > 2 ? args[2] : "2026-07-11", inv, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
 
-var cross = new DeclencheurSmaCross(9, 21);
+var cross = new DeclencheurSmaCross(3, 9);
 var atr = new AtrWilder(14);
 
 using var sortie = new StreamWriter(args.Length > 3 ? args[3] : "parite_csharp.csv");

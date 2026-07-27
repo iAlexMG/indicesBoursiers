@@ -17,8 +17,8 @@ namespace SmaAnnuleVisuel;
 /// </summary>
 public sealed class SmaAnnuleVisuelIndicator : Indicator
 {
-    [InputParameter("SMA rapide (1 m)", 0, 2, 100, 1, 0)] public int SmaRapide = 2;
-    [InputParameter("SMA lente (1 m)", 1, 3, 200, 1, 0)] public int SmaLente = 6;
+    [InputParameter("SMA rapide (1 m)", 0, 2, 100, 1, 0)] public int SmaRapide = 3;
+    [InputParameter("SMA lente (1 m)", 1, 3, 200, 1, 0)] public int SmaLente = 9;
     [InputParameter("Période ATR (1 m)", 2, 2, 100, 1, 0)] public int AtrPeriode = 7;
     [InputParameter("Stop (× ATR)", 3, 0.5, 10, 0.5, 1)] public double StopMult = 1.0;
     [InputParameter("Take profit (× R)", 4, 0.5, 10, 0.5, 1)] public double TpR = 2.0;
@@ -106,8 +106,8 @@ public sealed class SmaAnnuleVisuelIndicator : Indicator
 
     public SmaAnnuleVisuelIndicator()
     {
-        Name = "Hybride H3 SMA Annulation (visuel)";
-        Description = "Croisement SMA 2/6 (1 m), bracket + annulation au croisement inverse — simulation OU journal réel";
+        Name = "SMA Annulation";
+        Description = "Croisement SMA 3/9 (1 m), bracket + annulation au croisement inverse — simulation OU journal réel";
         SeparateWindow = false;
         AddLineSeries("SMA rapide", Color.DodgerBlue, 2, LineStyle.Solid);
         AddLineSeries("SMA lente", Color.Orange, 2, LineStyle.Solid);
@@ -362,7 +362,7 @@ public sealed class SmaAnnuleVisuelIndicator : Indicator
             else if (t.SortieType == 'X') an++;
         }
 
-        string l1 = "H3 SMA Annulation" + (Source == ModeSource.Reel ? " · réel" : " · simulation");
+        string l1 = "SMA Annulation" + (Source == ModeSource.Reel ? " · réel" : " · simulation");
         string l2 = $"Trades {nb}   ·   TP {tp} / SL {sl} / annul. {an}";
         string l3 = $"Cumul  {cumPts.ToString("+0.0;-0.0;0.0", Inv)} pts   ·   {cumR.ToString("+0.0;-0.0;0.0", Inv)} R";
 

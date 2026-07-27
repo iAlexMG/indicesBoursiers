@@ -21,4 +21,4 @@ foreach ($f in "SmaBracketVisuel.dll","SmaBracketVisuel.deps.json","SmaBracketVi
     Copy-Item (Join-Path $out $f) $dest -Force
 }
 Write-Host "Deploye dans : $dest"
-Write-Host "Redemarrer Quantower, puis : graphe NQ 1 m -> clic droit -> Add indicator -> 'Hybride H1 SMA Bracket (visuel)'."
+Write-Host "Redemarrer Quantower, puis : graphe NQ 1 m -> clic droit -> Add indicator -> 'SMA Bracket'."
